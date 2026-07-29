@@ -15,7 +15,7 @@
     background-color: var(--color-dark-bg);
     color: #f3f4f6;
     font-family: var(--font-sans);
-    overflow-x: hidden;
+    overflow-x: clip;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
   
@@ -57,4 +57,21 @@ html.light .bg-tech-grid {
   background-image: 
     linear-gradient(to right, rgba(0, 163, 224, 0.08) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0, 163, 224, 0.08) 1px, transparent 1px);
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #invoice-printable, #invoice-printable * {
+    visibility: visible;
+  }
+  #invoice-printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+  }
 }

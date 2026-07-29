@@ -21,11 +21,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={plusJakartaSans.variable}>
-      <body className="bg-dark-bg font-sans antialiased text-gray-200">
-        <Navbar />
+    <html lang="en" className={`light ${plusJakartaSans.variable}`}>
+      <body className="bg-[#090d16] light:bg-slate-50 font-sans antialiased text-gray-200 light:text-slate-900 transition-colors duration-300">
         <main>{children}</main>
-        <Footer />
       </body>
     </html>
   );

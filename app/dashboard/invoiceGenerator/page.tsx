@@ -73,12 +73,21 @@ export default function InvoiceGenerator() {
     if (invoiceData.invoiceNo) {
       try {
         const { saveInvoiceData } = await import("@/app/lib/actions/invoiceActions");
-        await saveInvoiceData(
+        const res = await saveInvoiceData(
           invoiceData.invoiceNo,
           invoiceData.customerName,
           invoiceData.invoiceDate,
-          dpp
+          dpp,
+          invoiceData.customerAddress,
+          invoiceData.up,
+          invoiceData.phone,
+          invoiceData.items
         );
+        
+        if (res.success && res.inserted === false) {
+          alert("Peringatan: Nomor Invoice sudah digunakan. Silakan gunakan Nomor Invoice yang berbeda sebelum mencetak.");
+          return; // Hentikan proses cetak
+        }
       } catch (error) {
         console.error("Gagal menyimpan invoice:", error);
       }
@@ -364,7 +373,10 @@ export default function InvoiceGenerator() {
                 </table>
               </div>
               <div className="pt-4">
-                <div className="text-3xl font-black tracking-wider text-green-700 bg-gradient-to-r from-gray-400 to-green-600 bg-clip-text text-transparent opacity-90 italic drop-shadow-md">
+                <div 
+                  className="text-3xl font-black tracking-wider text-green-700 bg-gradient-to-r from-green-500 to-emerald-700 bg-clip-text text-transparent opacity-90 italic drop-shadow-md"
+                  style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
+                >
                   INVOICE
                 </div>
               </div>
@@ -385,9 +397,9 @@ export default function InvoiceGenerator() {
                   <div className="font-bold text-black uppercase whitespace-pre-wrap">
                     {invoiceData.customerAddress}
                   </div>
-                  <div className="font-bold text-black uppercase">
+                  {/* <div className="font-bold text-black uppercase">
                     TELP.{invoiceData.phone}
-                  </div>
+                  </div> */}
                 </div>
               </div>
 

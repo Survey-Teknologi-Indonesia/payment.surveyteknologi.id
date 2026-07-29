@@ -2,20 +2,31 @@
 
 import pool from "@/app/lib/neon";
 
-export async function saveInvoiceData(invoiceId: string, customer: string, date: string, dpp: number) {
+export async function saveInvoiceData(
+  invoiceId: string, 
+  customer: string, 
+  date: string, 
+  dpp: number,
+  customerAddress: string = "",
+  up: string = "",
+  phone: string = "",
+  items: any[] = []
+) {
   try {
     const query = `
-      INSERT INTO invoice (invoice_id, customer, date, dpp, status)
-      VALUES ($1, $2, $3, $4, 'Pending')
+      INSERT INTO invoice (invoice_id, customer, date, dpp, status, customer_address, up, phone, items)
+      VALUES ($1, $2, $3, $4, 'Pending', $5, $6, $7, $8)
       ON CONFLICT (invoice_id) 
-      DO UPDATE SET 
-        customer = EXCLUDED.customer,
-        date = EXCLUDED.date,
-        dpp = EXCLUDED.dpp;
+      DO NOTHING;
     `;
-    const values = [invoiceId, customer, date, dpp];
-    await pool.query(query, values);
-    return { success: true };
+    const values = [invoiceId, customer, date, dpp, customerAddress, up, phone, JSON.stringify(items)];
+    const result = await pool.query(query, values);
+    
+    if (result.rowCount === 0) {
+      return { success: true, inserted: false, message: "Nomor Invoice sudah ada. Tidak disimpan ulang." };
+    }
+    
+    return { success: true, inserted: true };
   } catch (error) {
     console.error("Error saving invoice:", error);
     return { success: false, error: (error as Error).message };
@@ -25,7 +36,7 @@ export async function saveInvoiceData(invoiceId: string, customer: string, date:
 export async function getInvoices() {
   try {
     const query = `
-      SELECT invoice_id, customer, date, dpp, status
+      SELECT invoice_id, customer, date, dpp, status, customer_address, up, phone, items
       FROM invoice
       ORDER BY date DESC
     `;

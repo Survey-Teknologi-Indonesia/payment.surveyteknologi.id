@@ -80,7 +80,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
           {/* Logo & Company Name (Row Layout) */}
           <div className="flex items-center gap-3 px-6 h-20 border-b border-white/10 light:border-slate-200 flex-shrink-0 group">
-            <Link href="/" className="flex items-center gap-3 w-full">
+            <Link href="/dashboard" className="flex items-center gap-3 w-full">
               <div className="relative overflow-hidden rounded-xl border border-white/15 light:border-slate-200 p-1 bg-white/5 light:bg-slate-50 transition-all duration-300 group-hover:border-brand-cyan/50 group-hover:shadow-md group-hover:shadow-brand-cyan/20 flex-shrink-0">
                 <Image
                   src="/assets/image/logo.jpeg"

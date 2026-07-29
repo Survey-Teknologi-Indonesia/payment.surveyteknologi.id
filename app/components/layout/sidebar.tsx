@@ -32,6 +32,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   // Menu Utama
   const mainMenuItems = [
     {
+      name: "Invoice Tracker",
+      href: "/dashboard/invoiceTracker",
+      icon: Activity,
+    },
+    {
       name: "Invoice Generator",
       href: "/dashboard/invoiceGenerator",
       icon: FileText,
@@ -41,8 +46,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       href: "/dashboard/proposal",
       icon: ClipboardPen,
     },
-    { name: "Tax Calculator", href: "/dashboard/tax", icon: Calculator },
-    // { name: "Analytics & GIS", href: "/dashboard#analytics", icon: Activity },
+    { 
+      name: "Tax Calculator",
+      href: "/dashboard/tax", 
+      icon: Calculator 
+    },
+
   ];
 
   // Footer Navbar Menu (Settings, dll)

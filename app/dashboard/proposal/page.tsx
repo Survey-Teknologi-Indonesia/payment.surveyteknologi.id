@@ -1,7 +1,10 @@
-import CommingSoon from "../comingsoon/page";
+"use client"
 
-export default function Proposal(){
-    return(
-        <CommingSoon/>
-    )
+import React, { useState } from 'react';
+import CommingSoon from '../comingsoon/page';
+
+export default function ExactProposalGenerator() {
+  return (
+    <CommingSoon />
+  );
 }

@@ -6,13 +6,11 @@ interface InvoiceItem {
   id: string;
   client: string;
   date: string;
-  dpp: number; // Dasar Pengenaan Pajak (Subtotal)
-  ppn: number; // PPN 12%
-  pph23: number; // Potongan PPh 23 (2% dari DPP)
-  status: 'Paid' | 'Pending';
+  amount: number; // Nilai Invoice
+  status: 'Paid' | 'Pending' | 'Overdue';
 }
 
-export default function TaxSummarySPT() {
+export default function InvoiceTracker() {
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -23,20 +21,18 @@ export default function TaxSummarySPT() {
         const res = await getInvoices();
         if (res.success && res.data) {
           const formatted = res.data.map((row: any) => {
+            // DB date is likely a Date object or string.
             let dateStr = row.date;
             if (row.date && typeof row.date !== 'string') {
                const d = new Date(row.date);
                dateStr = d.toLocaleDateString('en-GB'); // DD/MM/YYYY
             }
 
-            const dppValue = Number(row.dpp);
             return {
               id: row.invoice_id,
               client: row.customer,
               date: dateStr,
-              dpp: dppValue,
-              ppn: Math.round(dppValue * 0.12),
-              pph23: Math.round(dppValue * 0.02),
+              amount: Math.round(Number(row.dpp) * 1.12), // DPP + PPN 12%
               status: row.status,
             };
           });
@@ -51,15 +47,32 @@ export default function TaxSummarySPT() {
     loadData();
   }, []);
 
-  // Filter bulan laporan (bisa dikembangkan jadi state pilihan bulan)
-  const reportingPeriod = "Juli 2026";
+  const toggleStatus = async (id: string) => {
+    if (window.confirm("Apakah Anda yakin ingin mengubah status invoice ini?")) {
+      const currentInvoice = invoices.find(inv => inv.id === id);
+      if (!currentInvoice) return;
 
-  // Total Kalkulasi untuk SPT
-  const totalDPP = invoices.reduce((acc, item) => acc + item.dpp, 0);
-  const totalPPNKeluaran = invoices.reduce((acc, item) => acc + item.ppn, 0);
-  const totalPPh23Dipotong = invoices.reduce((acc, item) => acc + item.pph23, 0);
+      try {
+        const { toggleInvoiceStatus } = await import('@/app/lib/actions/invoiceActions');
+        const res = await toggleInvoiceStatus(id, currentInvoice.status);
+        if (res.success) {
+          setInvoices(prev => prev.map(inv => {
+            if (inv.id === id) {
+              return { ...inv, status: res.newStatus as any };
+            }
+            return inv;
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to toggle status", error);
+      }
+    }
+  };
 
-  // Format ke Rupiah
+  const totalInvoiced = invoices.reduce((acc, item) => acc + item.amount, 0);
+  const totalPaid = invoices.filter(i => i.status === 'Paid').reduce((acc, item) => acc + item.amount, 0);
+  const totalPending = invoices.filter(i => i.status !== 'Paid').reduce((acc, item) => acc + item.amount, 0);
+
   const formatIDR = (num: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
   };
@@ -72,45 +85,45 @@ export default function TaxSummarySPT() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">PT Survey Teknologi Indonesia</span>
-            <h1 className="text-xl font-bold text-slate-900 mt-0.5">Rekapitulasi Pajak & Ready SPT</h1>
-            <p className="text-sm text-slate-500">Periode Laporan Masa Pajak: <span className="font-semibold text-slate-700">{reportingPeriod}</span></p>
+            <h1 className="text-xl font-bold text-slate-900 mt-0.5">Invoice Tracker</h1>
+            <p className="text-sm text-slate-500">Pantau status pembayaran invoice klien</p>
           </div>
           <div className="flex gap-2">
             <button 
               onClick={() => window.print()}
               className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-xl hover:bg-slate-800 transition shadow-sm"
             >
-              Cetak / Ekspor Ringkasan SPT
+              Export Data
             </button>
           </div>
         </div>
 
-        {/* KARTU RINGKASAN UTAMA (READY SPT HIGHLIGHT) */}
+        {/* SUMMARY CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Peredaran Bruto (DPP)</p>
-            <p className="text-2xl font-bold text-slate-900 mt-2">{formatIDR(totalDPP)}</p>
-            <span className="text-xs text-slate-400 mt-1 inline-block">Dasar Pengenaan Pajak Bulanan</span>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Invoiced</p>
+            <p className="text-2xl font-bold text-slate-900 mt-2">{formatIDR(totalInvoiced)}</p>
+            <span className="text-xs text-slate-400 mt-1 inline-block">Seluruh tagihan yang diterbitkan</span>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Total PPN Keluaran (12%)</p>
-            <p className="text-2xl font-bold text-indigo-950 mt-2">{formatIDR(totalPPNKeluaran)}</p>
-            <span className="text-xs text-indigo-600 font-medium mt-1 inline-block">Siap input ke SPT Masa PPN</span>
+            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Total Paid</p>
+            <p className="text-2xl font-bold text-emerald-950 mt-2">{formatIDR(totalPaid)}</p>
+            <span className="text-xs text-emerald-600 font-medium mt-1 inline-block">Tagihan yang sudah lunas</span>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Total PPh 23 Dipotong Klien</p>
-            <p className="text-2xl font-bold text-emerald-950 mt-2">{formatIDR(totalPPh23Dipotong)}</p>
-            <span className="text-xs text-emerald-600 font-medium mt-1 inline-block">Kredit pajak / Bukti potong</span>
+            <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Total Pending</p>
+            <p className="text-2xl font-bold text-amber-950 mt-2">{formatIDR(totalPending)}</p>
+            <span className="text-xs text-amber-600 font-medium mt-1 inline-block">Menunggu pembayaran klien</span>
           </div>
         </div>
 
-        {/* TABEL RINCIAN TRANSAKSI BULANAN */}
+        {/* TABEL RINCIAN INVOICE */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-slate-800">Daftar Transaksi Objek Pajak Periode Ini</h2>
-            <span className="text-xs text-slate-500">Sinkron otomatis dari modul Invoice</span>
+            <h2 className="text-base font-semibold text-slate-800">Daftar Invoice</h2>
+            <span className="text-xs text-slate-500">Real-time update</span>
           </div>
 
           <div className="overflow-x-auto">
@@ -120,10 +133,9 @@ export default function TaxSummarySPT() {
                   <th className="py-3 px-6 font-semibold">No. Invoice</th>
                   <th className="py-3 px-6 font-semibold">Klien / Customer</th>
                   <th className="py-3 px-6 font-semibold">Tanggal</th>
-                  <th className="py-3 px-6 font-semibold text-right">Nilai DPP (Rp)</th>
-                  <th className="py-3 px-6 font-semibold text-right">PPN 12% (Rp)</th>
-                  <th className="py-3 px-6 font-semibold text-right">PPh 23 (2%)</th>
-                  <th className="py-3 px-6 font-semibold text-center">Status Bayar</th>
+                  <th className="py-3 px-6 font-semibold text-right">Nilai Tagihan (Rp)</th>
+                  <th className="py-3 px-6 font-semibold text-center">Status</th>
+                  <th className="py-3 px-6 font-semibold text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -132,9 +144,7 @@ export default function TaxSummarySPT() {
                     <td className="py-4 px-6 font-medium text-slate-900">{inv.id}</td>
                     <td className="py-4 px-6 text-slate-700 font-medium">{inv.client}</td>
                     <td className="py-4 px-6 text-slate-500">{inv.date}</td>
-                    <td className="py-4 px-6 text-right font-medium text-slate-900">{formatIDR(inv.dpp)}</td>
-                    <td className="py-4 px-6 text-right text-indigo-600 font-semibold">{formatIDR(inv.ppn)}</td>
-                    <td className="py-4 px-6 text-right text-emerald-600 font-semibold">{formatIDR(inv.pph23)}</td>
+                    <td className="py-4 px-6 text-right font-medium text-slate-900">{formatIDR(inv.amount)}</td>
                     <td className="py-4 px-6 text-center">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-medium border ${
                         inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -142,18 +152,21 @@ export default function TaxSummarySPT() {
                         {inv.status}
                       </span>
                     </td>
+                    <td className="py-4 px-6 text-center">
+                      {inv.status === 'Pending' && (
+                        <button
+                          onClick={() => toggleStatus(inv.id)}
+                          className="text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-colors border bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100"
+                        >
+                          Tandai Lunas
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-
-        {/* CATATAN PANDUAN PELAPORAN */}
-        <div className="bg-slate-900 text-slate-300 p-6 rounded-2xl text-xs space-y-2">
-          <p className="font-bold text-white text-sm">💡 Panduan Cepat Pengisian DJP Online:</p>
-          <p>1. Gunakan angka pada kotak <span className="text-indigo-400 font-semibold">Total PPN Keluaran</span> untuk diinput ke formulir e-Faktur / SPT Masa PPN bulanan.</p>
-          <p>2. Simpan Bukti Potong PPh Pasal 23 dari masing-masing klien untuk dicatatkan sebagai kredit pajak pada SPT Tahunan Badan PT STI.</p>
         </div>
 
       </div>

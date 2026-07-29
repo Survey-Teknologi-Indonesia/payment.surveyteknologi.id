@@ -63,11 +63,26 @@ export default function InvoiceGenerator() {
   }, [invoiceData.invoiceNo]);
 
   // Fungsi Cetak / Save to PDF
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const originalTitle = document.title;
 
     const customFileName = invoiceData.invoiceNo.replace(/\//g, "-");
     document.title = customFileName;
+
+    // Simpan ke database sebelum cetak
+    if (invoiceData.invoiceNo) {
+      try {
+        const { saveInvoiceData } = await import("@/app/lib/actions/invoiceActions");
+        await saveInvoiceData(
+          invoiceData.invoiceNo,
+          invoiceData.customerName,
+          invoiceData.invoiceDate,
+          dpp
+        );
+      } catch (error) {
+        console.error("Gagal menyimpan invoice:", error);
+      }
+    }
 
     window.print();
 

@@ -1,24 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { FileText, Plus, Printer } from "lucide-react";
+import { FileText, Plus, Printer, Trash2 } from "lucide-react";
 
 export default function InvoiceGenerator() {
   // State untuk data form invoice
   const [invoiceData, setInvoiceData] = useState({
-    invoiceNo: "1003_ST2/IMP/PTVI/VII/2026",
-    invoiceDate: "20/07/2026",
-    customerName: "PT INOVASI MANDIRI PRATAMA",
-    customerAddress:
-      "GRAHA KAPITAL BUILDING 3rd FLOOR S-3038, JALAN KEMANG RAYA NO.4 JAKARTA 12730",
-    up: "Bapak Hasim",
-    phone: "08128337602",
+    invoiceNo: "",
+    invoiceDate: "",
+    customerName: "",
+    customerAddress: "",
+    up: "",
+    phone: "",
     items: [
       {
-        description:
-          "Survey Citra Satellite Tasking Resolusi 1.5 m atau resolusi equivalent untuk analisa bukaan lahan per 7 s/d 10 hari seluas ~900 km persegi (WBS X500009.OH)",
-        qty: 927,
-        price: 166805,
+        description: "",
+        qty: 0,
+        price: 0,
       },
     ],
   });
@@ -47,31 +45,36 @@ export default function InvoiceGenerator() {
     });
   };
 
+  // Fungsi Hapus Baris Item Pekerjaan Terakhir
+  const removeLastItemRow = () => {
+    if (invoiceData.items.length > 1) {
+      setInvoiceData({
+        ...invoiceData,
+        items: invoiceData.items.slice(0, -1),
+      });
+    }
+  };
+
   // Update document title secara real-time agar browser mengenali nama file
   useEffect(() => {
-    document.title = invoiceData.invoiceNo 
-      ? invoiceData.invoiceNo.replace(/\//g, "_") 
+    document.title = invoiceData.invoiceNo
+      ? invoiceData.invoiceNo.replace(/\//g, "_")
       : "Invoice";
   }, [invoiceData.invoiceNo]);
 
   // Fungsi Cetak / Save to PDF
   const handlePrint = () => {
-   
     const originalTitle = document.title;
 
-    const customFileName = invoiceData.invoiceNo.replace(/\//g, '-'); 
+    const customFileName = invoiceData.invoiceNo.replace(/\//g, "-");
     document.title = customFileName;
 
-  
     window.print();
-
 
     setTimeout(() => {
       document.title = originalTitle;
     }, 1000);
   };
-
-
 
   // Helper untuk parsing Qty yang bisa jadi persentase
   const parseQty = (qty: string | number) => {
@@ -110,6 +113,7 @@ export default function InvoiceGenerator() {
                   No. Invoice
                 </label>
                 <input
+                  placeholder="Input No Invoice"
                   type="text"
                   name="invoiceNo"
                   value={invoiceData.invoiceNo}
@@ -137,6 +141,7 @@ export default function InvoiceGenerator() {
                 Nama Customer
               </label>
               <input
+                placeholder="Input Nama Customer"
                 type="text"
                 name="customerName"
                 value={invoiceData.customerName}
@@ -150,6 +155,7 @@ export default function InvoiceGenerator() {
                 Alamat Customer
               </label>
               <textarea
+                placeholder="Input Alamat Customer"
                 name="customerAddress"
                 rows={3}
                 value={invoiceData.customerAddress}
@@ -164,6 +170,7 @@ export default function InvoiceGenerator() {
                   UP (Untuk Perhatian)
                 </label>
                 <input
+                  placeholder="Input Nama UP"
                   type="text"
                   name="up"
                   value={invoiceData.up}
@@ -176,6 +183,7 @@ export default function InvoiceGenerator() {
                   No. Telepon
                 </label>
                 <input
+                  placeholder="Input No. Telepon"
                   type="text"
                   name="phone"
                   value={invoiceData.phone}
@@ -257,12 +265,22 @@ export default function InvoiceGenerator() {
                   </div>
                 </div>
               ))}
-              <button
-                onClick={addItemRow}
-                className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/80 light:bg-slate-100 hover:bg-slate-800 text-xs font-medium text-slate-300 light:text-slate-700 hover:text-white light:hover:text-slate-900 transition-colors border border-slate-700/50 light:border-slate-200"
-              >
-                <Plus className="w-3.5 h-3.5" /> Tambah Item
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={addItemRow}
+                  className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/80 light:bg-slate-100 hover:bg-slate-800 text-xs font-medium text-slate-300 light:text-slate-700 hover:text-white light:hover:text-slate-900 transition-colors border border-slate-700/50 light:border-slate-200"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Tambah Item
+                </button>
+                {invoiceData.items.length > 1 && (
+                  <button
+                    onClick={removeLastItemRow}
+                    className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-950/30 light:bg-red-50 hover:bg-red-900/50 light:hover:bg-red-100 text-xs font-medium text-red-400 light:text-red-600 hover:text-red-300 light:hover:text-red-700 transition-colors border border-red-900/50 light:border-red-200"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Hapus Item
+                  </button>
+                )}
+              </div>
             </div>
 
             <button

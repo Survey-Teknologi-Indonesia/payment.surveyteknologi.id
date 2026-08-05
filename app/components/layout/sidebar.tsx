@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -15,10 +15,14 @@ import {
   User,
   ShieldCheck,
   ChevronRight,
+  ChevronDown,
   ExternalLink,
   Clock,
   Calculator,
   ClipboardPen,
+  ArrowLeft,
+  Home,
+  Wallet,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -26,11 +30,60 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
+type MenuItem = {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  subItems?: { name: string; href: string }[];
+};
+
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
+  
+  // Track open state for submenus
+  const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({
+    "Tax Calculator": pathname?.startsWith("/dashboard/tax") || false,
+  });
+
+  const toggleSubmenu = (menuName: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    setOpenMenus(prev => ({ ...prev, [menuName]: !prev[menuName] }));
+  };
+
+  const isProjectWorkspace = pathname?.startsWith("/dashboard/projects/") && pathname !== "/dashboard/projects";
+  const projectId = isProjectWorkspace ? pathname.split("/")[3] : null;
+
+  const projectMenuItems: MenuItem[] = [
+    {
+      name: "Overview",
+      href: `/dashboard/projects/${projectId}`,
+      icon: Home,
+    },
+    {
+      name: "Tagihan (Invoice)",
+      href: `/dashboard/projects/${projectId}/invoice`,
+      icon: FileText,
+    },
+    {
+      name: "Kwitansi",
+      href: `/dashboard/projects/${projectId}/kwitansi`,
+      icon: FileText,
+    },
+    {
+      name: "Operational",
+      href: `/dashboard/projects/${projectId}/operational`,
+      icon: Wallet,
+    },
+
+  ];
 
   // Menu Utama
-  const mainMenuItems = [
+  const mainMenuItems: MenuItem[] = [
+    {
+      name: "Projects Hub",
+      href: "/dashboard/projects",
+      icon: Layers,
+    },
     {
       name: "Invoice Tracker",
       href: "/dashboard/invoiceTracker",
@@ -49,9 +102,13 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     { 
       name: "Tax Calculator",
       href: "/dashboard/tax", 
-      icon: Calculator 
+      icon: Calculator,
+      subItems: [
+        { name: "Dashboard & Keluaran", href: "/dashboard/tax" },
+        { name: "PPN Masukan", href: "/dashboard/tax/ppn-masukan" },
+        { name: "PPh 21", href: "/dashboard/tax/pph21" },
+      ]
     },
-
   ];
 
   // Footer Navbar Menu (Settings, dll)
@@ -106,45 +163,119 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           {/* Menu Utama Label */}
           <div className="px-6 pt-6 pb-2">
             <span className="text-[10px] font-bold text-gray-400 light:text-slate-400 uppercase tracking-widest">
-              Menu Utama
+              {isProjectWorkspace ? "Project Menu" : "Menu Utama"}
             </span>
           </div>
 
           {/* Menu Navigation */}
           <nav className="px-3 space-y-1">
-            {mainMenuItems.map((item) => {
+            {isProjectWorkspace && (
+              <div className="mb-2 px-1">
+              </div>
+            )}
+            
+            {(isProjectWorkspace ? projectMenuItems : mainMenuItems).map((item) => {
               const Icon = item.icon;
-              // const isActive = pathname === item.href || (item.href === "/dashboard" && pathname?.startsWith("/dashboard") && !item.href.includes("#"));
-              const isActive = pathname === item.href;
+              const hasSubItems = item.subItems && item.subItems.length > 0;
+              
+              // Determine if the main item is active
+              let isActive = false;
+              if (hasSubItems) {
+                // For parent items, consider active if pathname starts with href (exact match not required)
+                isActive = pathname === item.href || (pathname?.startsWith(item.href + '/') && true);
+              } else {
+                isActive = pathname === item.href;
+              }
+
+              const isSubMenuOpen = openMenus[item.name];
+
               return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={onClose}
-                  className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative ${
-                    isActive
-                      ? "bg-gradient-to-r from-brand-cyan/20 to-[#004b87]/30 light:from-brand-blue/10 light:to-brand-cyan/10 text-white light:text-[#004b87] border border-brand-cyan/30 light:border-brand-blue/30 shadow-lg shadow-brand-cyan/10"
-                      : "text-gray-400 light:text-slate-600 hover:text-white light:hover:text-slate-900 hover:bg-white/5 light:hover:bg-slate-100"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-1.5 rounded-lg transition-colors ${
+                <div key={item.name} className="flex flex-col">
+                  {hasSubItems ? (
+                    // Button for dropdown toggle
+                    <button
+                      onClick={(e) => toggleSubmenu(item.name, e)}
+                      className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative w-full ${
                         isActive
-                          ? "bg-brand-cyan/20 light:bg-brand-blue text-brand-cyan light:text-white"
-                          : "text-gray-400 light:text-slate-500 group-hover:text-white light:group-hover:text-slate-900"
+                          ? "bg-gradient-to-r from-brand-cyan/20 to-[#004b87]/30 light:from-brand-blue/10 light:to-brand-cyan/10 text-white light:text-[#004b87] border border-brand-cyan/30 light:border-brand-blue/30 shadow-lg shadow-brand-cyan/10"
+                          : "text-gray-400 light:text-slate-600 hover:text-white light:hover:text-slate-900 hover:bg-white/5 light:hover:bg-slate-100 border border-transparent"
                       }`}
                     >
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <span>{item.name}</span>
-                  </div>
-                  {isActive ? (
-                    <div className="w-1.5 h-1.5 rounded-full bg-brand-cyan light:bg-[#004b87]" />
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isActive
+                              ? "bg-brand-cyan/20 light:bg-brand-blue text-brand-cyan light:text-white"
+                              : "text-gray-400 light:text-slate-500 group-hover:text-white light:group-hover:text-slate-900"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <span>{item.name}</span>
+                      </div>
+                      <div className="flex items-center">
+                        {isSubMenuOpen ? (
+                          <ChevronDown className={`w-4 h-4 transition-transform ${isActive ? "text-brand-cyan" : "text-gray-500 group-hover:text-white"}`} />
+                        ) : (
+                          <ChevronRight className={`w-4 h-4 transition-transform ${isActive ? "text-brand-cyan" : "text-gray-500 group-hover:text-white"}`} />
+                        )}
+                      </div>
+                    </button>
                   ) : (
-                    <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-gray-500" />
+                    // Regular Link
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative ${
+                        isActive
+                          ? "bg-gradient-to-r from-brand-cyan/20 to-[#004b87]/30 light:from-brand-blue/10 light:to-brand-cyan/10 text-white light:text-[#004b87] border border-brand-cyan/30 light:border-brand-blue/30 shadow-lg shadow-brand-cyan/10"
+                          : "text-gray-400 light:text-slate-600 hover:text-white light:hover:text-slate-900 hover:bg-white/5 light:hover:bg-slate-100 border border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isActive
+                              ? "bg-brand-cyan/20 light:bg-brand-blue text-brand-cyan light:text-white"
+                              : "text-gray-400 light:text-slate-500 group-hover:text-white light:group-hover:text-slate-900"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <span>{item.name}</span>
+                      </div>
+                      {isActive ? (
+                        <div className="w-1.5 h-1.5 rounded-full bg-brand-cyan light:bg-[#004b87]" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-gray-500" />
+                      )}
+                    </Link>
                   )}
-                </Link>
+
+                  {/* Submenu Dropdown Items */}
+                  {hasSubItems && isSubMenuOpen && (
+                    <div className="mt-1 space-y-1 pl-11 pr-2 pb-2">
+                      {item.subItems?.map(sub => {
+                        const isSubActive = pathname === sub.href;
+                        return (
+                          <Link
+                            key={sub.name}
+                            href={sub.href}
+                            onClick={onClose}
+                            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 relative ${
+                              isSubActive
+                                ? "text-brand-cyan bg-brand-cyan/10"
+                                : "text-gray-400 hover:text-white hover:bg-slate-600"
+                            }`}
+                          >
+                            <span>{sub.name}</span>
+                            {isSubActive && <div className="w-1 h-1 rounded-full bg-brand-cyan" />}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </nav>

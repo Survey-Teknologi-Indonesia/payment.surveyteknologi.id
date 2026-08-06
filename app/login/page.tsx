@@ -21,8 +21,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-
-
+import { loginUser } from "./actions";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -66,7 +65,7 @@ export default function LoginPage() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus({ type: null, message: "" });
 
@@ -80,27 +79,42 @@ export default function LoginPage() {
 
     setIsLoading(true);
 
-    // Simulate login request delay
-    setTimeout(() => {
+    try {
+      const result = await loginUser(email, password);
       setIsLoading(false);
-      if (email.includes("@")) {
+
+      if (result.success) {
         setStatus({
           type: "success",
-          message: "Authentication successful! Redirecting to dashboard...",
+          message: result.message,
         });
+
+        // Optional: Save user info in localStorage or context if needed, for example:
+        if (result.user) {
+          localStorage.setItem("userLevel", result.user.level);
+          localStorage.setItem("userEmail", result.user.email);
+          if (result.user.name) localStorage.setItem("userName", result.user.name);
+          if (result.user.jabatan) localStorage.setItem("userJabatan", result.user.jabatan);
+        }
+
         router.push("/dashboard");
       } else {
         setStatus({
           type: "error",
-          message: "Please enter a valid corporate email address.",
+          message: result.message || "Invalid credentials.",
         });
       }
-    }, 1500);
+    } catch (error) {
+      setIsLoading(false);
+      setStatus({
+        type: "error",
+        message: "An unexpected error occurred. Please try again.",
+      });
+    }
   };
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:grid lg:grid-cols-12 overflow-hidden bg-slate-50 light:bg-slate-50 [html:not(.light)_&]:bg-[#090d16] text-slate-900 light:text-slate-900 [html:not(.light)_&]:text-white transition-colors duration-300">
-      
       {/* ========================================================
           LEFT COLUMN: Hero & Branding Panel (7 Cols on Desktop)
           ======================================================== */}
@@ -135,41 +149,58 @@ export default function LoginPage() {
         {/* Center Hero Message */}
         <div className="relative z-10 max-w-2xl my-auto py-12">
           <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest text-brand-cyan uppercase bg-brand-cyan/15 border border-brand-cyan/30 px-3.5 py-1.5 rounded-full mb-6 shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '4s' }} />
+            <Sparkles
+              className="w-3.5 h-3.5 animate-spin"
+              style={{ animationDuration: "4s" }}
+            />
             <span>INTEGRATED DIGITAL ECOSYSTEM</span>
           </span>
-          
+
           <h1 className="text-4xl xl:text-5xl font-extrabold tracking-tight text-white leading-tight">
             Next-Generation Payment &amp; Geospatial Intelligence.
           </h1>
-          
+
           <p className="mt-5 text-base xl:text-lg text-blue-100/85 font-light leading-relaxed max-w-xl">
-            Access real-time analytics, automated billing workflows, and secure digital transaction processing tailored for enterprise survey operations across Indonesia.
+            Access real-time analytics, automated billing workflows, and secure
+            digital transaction processing tailored for enterprise survey
+            operations across Indonesia.
           </p>
 
           {/* Feature Highlight Pills */}
           <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-4 rounded-2xl bg-white/[0.06] border border-white/10 backdrop-blur-md hover:bg-white/[0.1] transition-all">
               <LockKeyhole className="w-6 h-6 text-brand-cyan mb-2" />
-              <h3 className="text-sm font-bold text-white">Bank-Grade Security</h3>
-              <p className="text-xs text-blue-100/70 mt-1">256-bit SSL encryption &amp; enterprise SSO</p>
+              <h3 className="text-sm font-bold text-white">
+                Bank-Grade Security
+              </h3>
+              <p className="text-xs text-blue-100/70 mt-1">
+                256-bit SSL encryption &amp; enterprise SSO
+              </p>
             </div>
             <div className="p-4 rounded-2xl bg-white/[0.06] border border-white/10 backdrop-blur-md hover:bg-white/[0.1] transition-all">
               <Zap className="w-6 h-6 text-amber-400 mb-2" />
               <h3 className="text-sm font-bold text-white">Real-Time Sync</h3>
-              <p className="text-xs text-blue-100/70 mt-1">Instant surveyor &amp; billing data relay</p>
+              <p className="text-xs text-blue-100/70 mt-1">
+                Instant surveyor &amp; billing data relay
+              </p>
             </div>
             <div className="p-4 rounded-2xl bg-white/[0.06] border border-white/10 backdrop-blur-md hover:bg-white/[0.1] transition-all">
               <BarChart3 className="w-6 h-6 text-emerald-400 mb-2" />
-              <h3 className="text-sm font-bold text-white">Unified Analytics</h3>
-              <p className="text-xs text-blue-100/70 mt-1">Automated invoice tracking &amp; reporting</p>
+              <h3 className="text-sm font-bold text-white">
+                Unified Analytics
+              </h3>
+              <p className="text-xs text-blue-100/70 mt-1">
+                Automated invoice tracking &amp; reporting
+              </p>
             </div>
           </div>
         </div>
 
         {/* Bottom Footer */}
         <div className="relative z-10 flex items-center justify-between text-xs text-blue-200/60 font-medium border-t border-white/10 pt-6">
-          <span>&copy; 2026 Survey Teknologi Indonesia. All rights reserved.</span>
+          <span>
+            &copy; 2026 Survey Teknologi Indonesia. All rights reserved.
+          </span>
           <span className="flex items-center gap-1.5 text-emerald-400">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             System Status: Operational
@@ -181,7 +212,6 @@ export default function LoginPage() {
           RIGHT COLUMN: Login Form Area (5 Cols on Desktop)
           ======================================================== */}
       <div className="lg:col-span-5 xl:col-span-5 flex flex-col justify-center items-center p-6 sm:p-12 lg:p-16 relative bg-slate-50 light:bg-slate-50 [html:not(.light)_&]:bg-[#090d16] transition-colors duration-300 min-h-screen">
-        
         {/* Subtle Background Glow for Right Column */}
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(0,163,224,0.08)_0%,transparent_70%)] rounded-full blur-3xl pointer-events-none" />
 
@@ -209,7 +239,6 @@ export default function LoginPage() {
 
         {/* Form Container */}
         <div className="w-full max-w-md mx-auto space-y-8 my-auto">
-          
           {/* Mobile-Only Header Brand Logo (< lg screens) */}
           <div className="flex lg:hidden items-center gap-3 pb-2 border-b border-slate-200 light:border-slate-200 [html:not(.light)_&]:border-white/10">
             <Image
@@ -303,7 +332,8 @@ export default function LoginPage() {
                     e.preventDefault();
                     setStatus({
                       type: "error",
-                      message: "Password reset instructions sent to your corporate email.",
+                      message:
+                        "Password reset instructions sent to your corporate email.",
                     });
                   }}
                   className="text-xs font-bold text-brand-cyan hover:text-brand-cyan/80 transition-colors"
@@ -393,7 +423,8 @@ export default function LoginPage() {
               onClick={() =>
                 setStatus({
                   type: "error",
-                  message: "Single Sign-On (SSO) is currently restricted to internal employees.",
+                  message:
+                    "Single Sign-On (SSO) is currently restricted to internal employees.",
                 })
               }
               className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-200 light:border-slate-200 [html:not(.light)_&]:border-white/10 bg-white light:bg-white [html:not(.light)_&]:bg-white/5 text-xs font-bold text-slate-700 light:text-slate-700 [html:not(.light)_&]:text-gray-300 hover:bg-slate-100 light:hover:bg-slate-100 [html:not(.light)_&]:hover:bg-white/10 hover:text-slate-900 light:hover:text-slate-900 [html:not(.light)_&]:hover:text-white transition-all shadow-sm cursor-pointer"
@@ -428,7 +459,10 @@ export default function LoginPage() {
               }
               className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-200 light:border-slate-200 [html:not(.light)_&]:border-white/10 bg-white light:bg-white [html:not(.light)_&]:bg-white/5 text-xs font-bold text-slate-700 light:text-slate-700 [html:not(.light)_&]:text-gray-300 hover:bg-slate-100 light:hover:bg-slate-100 [html:not(.light)_&]:hover:bg-white/10 hover:text-slate-900 light:hover:text-slate-900 [html:not(.light)_&]:hover:text-white transition-all shadow-sm cursor-pointer"
             >
-              <svg className="w-4 h-4 fill-current text-[#00a4ef]" viewBox="0 0 23 23">
+              <svg
+                className="w-4 h-4 fill-current text-[#00a4ef]"
+                viewBox="0 0 23 23"
+              >
                 <path d="M0 0h11v11H0zM12 0h11v11H12zM0 12h11v11H0zM12 12h11v11H12z" />
               </svg>
               <span>Microsoft</span>

@@ -117,14 +117,14 @@ export default function DashboardNavbar({
         </button>
 
         {/* Tombol Logout Paling Kanan */}
-        <button
+        {/* <button
           onClick={handleLogout}
           disabled={isLoggingOut}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 light:from-red-500/10 light:to-red-600/10 light:hover:from-red-500/20 light:hover:to-red-600/20 text-red-400 light:text-red-600 border border-red-500/30 hover:border-red-500/50 text-sm font-bold shadow-lg shadow-red-500/10 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer disabled:opacity-50"
         >
           <LogOut className={`w-4 h-4 ${isLoggingOut ? "animate-spin" : ""}`} />
           <span className="hidden sm:inline">{isLoggingOut ? "Keluar..." : "Logout"}</span>
-        </button>
+        </button> */}
 
       </div>
 

@@ -32,6 +32,9 @@ export default function ProjectWorkspacePage({
 
   // Dummy Work Orders (empty array to show empty state)
   const workOrders: any[] = [];
+  
+  // Dummy Invoices (empty array to show empty state)
+  const invoices: any[] = [];
 
   // Operational stages state
   const [stages, setStages] = useState([
@@ -195,8 +198,61 @@ export default function ProjectWorkspacePage({
         </div>
       </section>
 
-      {/* 5. Work Order (WO) Tracking */}
+      {/* 5. Invoice Tracking */}
       <section className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: "200ms", animationFillMode: "both" }}>
+        <h2 className="text-xl font-bold mb-6 text-white light:text-slate-900 flex items-center gap-2">
+          <FileText className="w-5 h-5 text-brand-cyan" />
+          Invoice Tracking
+        </h2>
+        <div className="bg-[#121826]/90 light:bg-white border border-slate-800/80 light:border-slate-200 rounded-2xl overflow-hidden shadow-lg">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-300 light:text-slate-600">
+              <thead className="text-xs text-slate-400 light:text-slate-500 uppercase bg-[#090d16]/80 light:bg-slate-50 border-b border-slate-800/80 light:border-slate-200">
+                <tr>
+                  <th scope="col" className="px-6 py-4 font-semibold">No</th>
+                  <th scope="col" className="px-6 py-4 font-semibold whitespace-nowrap">Tanggal Terbit</th>
+                  <th scope="col" className="px-6 py-4 font-semibold">Nomor Invoice</th>
+                  <th scope="col" className="px-6 py-4 font-semibold">Nominal</th>
+                  <th scope="col" className="px-6 py-4 font-semibold whitespace-nowrap">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/80 light:divide-slate-200">
+                {invoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center gap-3">
+                        <FileText className="w-10 h-10 text-slate-500/50 light:text-slate-300" />
+                        <p className="text-slate-400 light:text-slate-500 font-medium">
+                          Belum ada Invoice yang tersedia.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  invoices.map((inv, idx) => (
+                    <tr key={idx} className="hover:bg-white/5 light:hover:bg-slate-50/80 transition-colors">
+                      <td className="px-6 py-4">{idx + 1}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{inv.tanggalTerbit}</td>
+                      <td className="px-6 py-4 font-medium text-white light:text-slate-900">{inv.nomor}</td>
+                      <td className="px-6 py-4 font-mono">{inv.nominal}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          inv.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                        }`}>
+                          {inv.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Work Order (WO) Tracking */}
+      <section className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: "300ms", animationFillMode: "both" }}>
         <h2 className="text-xl font-bold mb-6 text-white light:text-slate-900 flex items-center gap-2">
           <FileText className="w-5 h-5 text-brand-cyan" />
           Work Order Tracking

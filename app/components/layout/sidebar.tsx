@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { logoutUser } from "../../login/actions";
 import {
   LayoutDashboard,
   FileText,
@@ -23,6 +24,7 @@ import {
   ArrowLeft,
   Home,
   Wallet,
+  LogOut,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -39,6 +41,41 @@ type MenuItem = {
 
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [userInfo, setUserInfo] = useState({ name: "Memuat...", role: "User", initials: "--" });
+
+  useEffect(() => {
+    const email = localStorage.getItem("userEmail");
+    const level = localStorage.getItem("userLevel");
+    const name = localStorage.getItem("userName");
+    const jabatan = localStorage.getItem("userJabatan");
+    
+    if (email) {
+      const namePart = email.replace('@surveyteknologi.id', '');
+      const formattedName = namePart
+        .split('.')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      
+      const displayName = name || formattedName;
+      const initials = displayName.substring(0, 2).toUpperCase();
+      
+      setUserInfo({
+        name: displayName,
+        role: jabatan || level || "User",
+        initials: initials
+      });
+    }
+  }, []);
+
+  const handleLogout = async () => {
+    await logoutUser();
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userLevel");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userJabatan");
+    router.push("/login");
+  };
   
   // Track open state for submenus
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({
@@ -305,26 +342,36 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 </Link>
               );
             })}
+            
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-400/10 transition-all duration-200 group"
+            >
+              <LogOut className="w-4 h-4 text-rose-400 group-hover:text-rose-300 transition-colors" />
+              <span>Logout</span>
+            </button>
           </div>
 
           {/* User Profile Summary Card */}
-          <div className="p-3 rounded-xl bg-white/5 light:bg-white border border-white/10 light:border-slate-200/80 shadow-sm flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-[#004b87] to-brand-cyan flex items-center justify-center text-white font-bold text-xs shadow-md flex-shrink-0">
-              HM
+          <Link href="/dashboard/profile" onClick={onClose} className="block group">
+            <div className="p-3 rounded-xl bg-white/5 light:bg-white border border-white/10 light:border-slate-200/80 shadow-sm flex items-center gap-3 transition-colors group-hover:bg-white/10 light:group-hover:bg-slate-50 cursor-pointer">
+              <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-[#004b87] to-brand-cyan flex items-center justify-center text-white font-bold text-xs shadow-md flex-shrink-0">
+                {userInfo.initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-white light:text-slate-900 truncate group-hover:text-brand-cyan transition-colors">
+                  {userInfo.name}
+                </p>
+                <p className="text-[10px] text-brand-cyan font-medium truncate capitalize">
+                  {userInfo.role}
+                </p>
+              </div>
+              <div
+                className="h-2 w-2 rounded-full bg-emerald-400"
+                title="Online"
+              />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-white light:text-slate-900 truncate">
-                Hindrawan Hamid M.
-              </p>
-              <p className="text-[10px] text-brand-cyan font-medium truncate">
-                Direktur Utama
-              </p>
-            </div>
-            <div
-              className="h-2 w-2 rounded-full bg-emerald-400"
-              title="Online"
-            />
-          </div>
+          </Link>
         </div>
       </aside>
     </>

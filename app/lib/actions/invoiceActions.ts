@@ -36,7 +36,7 @@ export async function saveInvoiceData(
 export async function getInvoices() {
   try {
     const query = `
-      SELECT invoice_id, customer, date, dpp, status, customer_address, up, phone, items
+      SELECT *
       FROM invoice
       ORDER BY date DESC
     `;

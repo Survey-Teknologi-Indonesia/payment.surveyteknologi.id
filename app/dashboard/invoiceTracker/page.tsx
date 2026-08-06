@@ -12,12 +12,27 @@ interface InvoiceItem {
   up?: string;
   phone?: string;
   items?: any[];
+  dpp?: number;
 }
+const parseQty = (qtyStr: string | number) => {
+  if (typeof qtyStr === 'number') return qtyStr;
+  const str = String(qtyStr).trim();
+  if (str.endsWith('%')) {
+    const num = parseFloat(str.replace('%', '').trim());
+    return isNaN(num) ? 0 : num / 100;
+  }
+  const num = parseFloat(str);
+  return isNaN(num) ? 0 : num;
+};
 
 export default function InvoiceTracker() {
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceItem | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
+  const [parseProgress, setParseProgress] = useState(0);
 
   React.useEffect(() => {
     async function loadData() {
@@ -33,17 +48,24 @@ export default function InvoiceTracker() {
                dateStr = d.toLocaleDateString('en-GB'); // DD/MM/YYYY
             }
 
-            return {
-              id: row.invoice_id,
-              client: row.customer,
-              date: dateStr,
-              amount: Math.round(Number(row.dpp) * 1.12), // DPP + PPN 12%
-              status: row.status,
-              customerAddress: row.customer_address,
-              up: row.up,
-              phone: row.phone,
-              items: row.items ? (typeof row.items === 'string' ? JSON.parse(row.items) : row.items) : []
-            };
+              const parsedItems = row.items ? (typeof row.items === 'string' ? JSON.parse(row.items) : row.items) : [];
+              const subtotal = parsedItems.reduce((acc: number, item: any) => acc + parseQty(item.qty) * Number(item.price), 0);
+              const dpp = row.dpp ? Number(row.dpp) : Math.round(subtotal);
+              const vat = Math.round(dpp * 0.12);
+              const amount = subtotal + vat;
+
+              return {
+                id: row.invoice_id,
+                client: row.customer,
+                date: dateStr,
+                amount: amount,
+                status: row.status,
+                customerAddress: row.customer_address,
+                up: row.up,
+                phone: row.phone,
+                dpp: dpp,
+                items: parsedItems
+              };
           });
           setInvoices(formatted);
         }
@@ -55,6 +77,58 @@ export default function InvoiceTracker() {
     }
     loadData();
   }, []);
+
+  const handleProcessPDF = async () => {
+    if (!importFile) {
+      alert("Pilih file PDF terlebih dahulu");
+      return;
+    }
+
+    setIsParsing(true);
+    setParseProgress(10); // Start progress
+
+    try {
+      const formData = new FormData();
+      formData.append("file", importFile);
+
+      // Simulate progress bar moving up to 90% while waiting for network
+      const progressInterval = setInterval(() => {
+        setParseProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 300);
+
+      const { parseInvoicePDF } = await import('@/app/lib/actions/pdfParserAction');
+      const res = await parseInvoicePDF(formData);
+
+      clearInterval(progressInterval);
+      setParseProgress(100);
+
+      setTimeout(() => {
+        setIsParsing(false);
+        setParseProgress(0);
+        
+        if (res.success) {
+          alert("Berhasil! " + res.message);
+          setIsImportModalOpen(false);
+          setImportFile(null);
+          window.location.reload(); // Reload to fetch new data
+        } else {
+          alert("Gagal: " + res.message);
+        }
+      }, 500);
+
+    } catch (error) {
+      console.error(error);
+      setIsParsing(false);
+      setParseProgress(0);
+      alert("Terjadi kesalahan sistem saat memproses PDF.");
+    }
+  };
 
   const toggleStatus = async (id: string) => {
     if (window.confirm("Apakah Anda yakin ingin mengubah status invoice ini?")) {
@@ -86,24 +160,13 @@ export default function InvoiceTracker() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
   };
 
-  const parseQty = (qtyStr: string | number) => {
-    if (typeof qtyStr === 'number') return qtyStr;
-    const str = String(qtyStr).trim();
-    if (str.endsWith('%')) {
-      const num = parseFloat(str.replace('%', '').trim());
-      return isNaN(num) ? 0 : num / 100;
-    }
-    const num = parseFloat(str);
-    return isNaN(num) ? 0 : num;
-  };
-
   let modalSubtotal = 0;
   if (selectedInvoice && selectedInvoice.items) {
     modalSubtotal = selectedInvoice.items.reduce((acc, item) => acc + parseQty(item.qty) * Number(item.price), 0);
   }
-  const modalDpp = Math.round(modalSubtotal / 1.12);
+  const modalDpp = selectedInvoice?.dpp ? Math.round(selectedInvoice.dpp) : Math.round(modalSubtotal);
   const modalVat = Math.round(modalDpp * 0.12);
-  const modalGrandTotal = modalDpp + modalVat;
+  const modalGrandTotal = modalSubtotal + modalVat;
 
   return (
     <div className="min-h-screen bg-slate-100 p-8 font-sans">
@@ -118,10 +181,10 @@ export default function InvoiceTracker() {
           </div>
           <div className="flex gap-2">
             <button 
-              onClick={() => window.print()}
+              onClick={() => setIsImportModalOpen(true)}
               className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-xl hover:bg-slate-800 transition shadow-sm"
             >
-              Export Data
+              Import PDF
             </button>
           </div>
         </div>
@@ -456,6 +519,58 @@ export default function InvoiceTracker() {
                 >
                   Tutup Modal
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL IMPORT PDF */}
+        {isImportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-slate-800">Import PDF</h3>
+                <button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition">
+                  Tutup
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                {isParsing ? (
+                  <div className="flex flex-col items-center justify-center py-6">
+                    <p className="text-sm font-medium text-slate-700 mb-4">Sedang memproses dokumen...</p>
+                    <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                      <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300 ease-out" style={{ width: `${parseProgress}%` }}></div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">{parseProgress}% selesai</p>
+                  </div>
+                ) : (
+                  <form className="flex flex-col gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Pilih file PDF
+                      </label>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                        className="block w-full text-sm text-slate-500
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-full file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-indigo-50 file:text-indigo-700
+                          hover:file:bg-indigo-100 transition"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleProcessPDF}
+                      className="w-full px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!importFile}
+                    >
+                      Process PDF
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
           </div>

@@ -25,6 +25,7 @@ import {
   Home,
   Wallet,
   LogOut,
+  CalendarClock,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -145,6 +146,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         { name: "PPN Masukan", href: "/dashboard/tax/ppn-masukan" },
         { name: "PPh 21", href: "/dashboard/tax/pph21" },
       ]
+    },
+    {
+      name: "Scheduler",
+      href: "/dashboard/scheduler",
+      icon: CalendarClock,
     },
   ];
 

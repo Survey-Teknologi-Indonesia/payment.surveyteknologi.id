@@ -46,18 +46,22 @@ export default function DashboardLayout({children}: {children: React.ReactNode})
   };
 
   return (
-    <div className="min-h-screen flex bg-[#090d16] light:bg-slate-50 text-slate-100 light:text-slate-900 font-sans transition-colors duration-300 relative overflow-x-clip">
+    <div className="min-h-screen print:min-h-auto flex bg-[#090d16] light:bg-slate-50 text-slate-100 light:text-slate-900 font-sans transition-colors duration-300 relative overflow-x-clip print:overflow-visible">
       {/* 1. SIDEBAR KIRI */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <div className="print:hidden">
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      </div>
 
       {/* 2. AREA CONTENT UTAMA + NAVBAR ATAS */}
-      <div className="flex-1 flex flex-col min-w-0 md:ml-64">
+      <div className="flex-1 flex flex-col min-w-0 md:ml-64 print:ml-0 print:overflow-visible">
         {/* Top Navbar dengan Search Bar dan Tombol Logout */}
-        <DashboardNavbar
-          onOpenSidebar={() => setIsSidebarOpen(true)}
-          searchQuery={searchQuery}
-          onSearchChange={(q) => setSearchQuery(q)}
-        />
+        <div className="print:hidden">
+          <DashboardNavbar
+            onOpenSidebar={() => setIsSidebarOpen(true)}
+            searchQuery={searchQuery}
+            onSearchChange={(q) => setSearchQuery(q)}
+          />
+        </div>
 
         {/* Background Tech Grid & Glowing Orbs */}
         <div className="absolute inset-0 bg-tech-grid opacity-20 light:opacity-30 pointer-events-none" />

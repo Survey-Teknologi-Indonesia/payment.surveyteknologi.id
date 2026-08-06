@@ -74,4 +74,31 @@ html.light .bg-tech-grid {
     border: none !important;
     box-shadow: none !important;
   }
+
+
+  #printable-gantt, #printable-gantt * {
+    visibility: visible;
+  }
+
+  #printable-gantt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    /* Remove padding/margins and force layout to stretch naturally */
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  
+  #printable-gantt > div:first-child {
+    width: 25% !important; 
+    overflow: visible !important;
+  }
+
+  #printable-gantt > div:last-child {
+    width: 75% !important; /* Make Gantt chart full width */
+    overflow: visible !important;
+  }
 }

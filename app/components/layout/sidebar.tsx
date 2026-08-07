@@ -26,6 +26,7 @@ import {
   Wallet,
   LogOut,
   CalendarClock,
+  ListChecks,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -112,6 +113,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       href: `/dashboard/projects/${projectId}/operational`,
       icon: Wallet,
     },
+    {
+      name: "Documents",
+      href: `/dashboard/projects/${projectId}/documents`,
+      icon: FileText,
+    },
 
   ];
 
@@ -152,12 +158,16 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       href: "/dashboard/scheduler",
       icon: CalendarClock,
     },
+    {
+      name: "Assets",
+      href: "/dashboard/assets",
+      icon: ListChecks,
+    },
   ];
 
-  // Footer Navbar Menu (Settings, dll)
   const footerMenuItems = [
     { name: "Settings", href: "/dashboard#settings", icon: Settings },
-    { name: "Help & Support", href: "/dashboard#help", icon: LifeBuoy },
+    { name: "Help & Support", href: "/dashboard/help", icon: LifeBuoy },
   ];
 
   return (

@@ -27,6 +27,8 @@ import {
   LogOut,
   CalendarClock,
   ListChecks,
+  LetterText,
+  CalculatorIcon,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -38,34 +40,38 @@ type MenuItem = {
   name: string;
   href: string;
   icon: React.ElementType;
-  subItems?: { name: string; href: string }[];
+  subItems?: { name: string; href: string; icon?: React.ElementType }[];
 };
 
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [userInfo, setUserInfo] = useState({ name: "Memuat...", role: "User", initials: "--" });
+  const [userInfo, setUserInfo] = useState({
+    name: "Memuat...",
+    role: "User",
+    initials: "--",
+  });
 
   useEffect(() => {
     const email = localStorage.getItem("userEmail");
     const level = localStorage.getItem("userLevel");
     const name = localStorage.getItem("userName");
     const jabatan = localStorage.getItem("userJabatan");
-    
+
     if (email) {
-      const namePart = email.replace('@surveyteknologi.id', '');
+      const namePart = email.replace("@surveyteknologi.id", "");
       const formattedName = namePart
-        .split('.')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-      
+        .split(".")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+
       const displayName = name || formattedName;
       const initials = displayName.substring(0, 2).toUpperCase();
-      
+
       setUserInfo({
         name: displayName,
         role: jabatan || level || "User",
-        initials: initials
+        initials: initials,
       });
     }
   }, []);
@@ -78,7 +84,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     localStorage.removeItem("userJabatan");
     router.push("/login");
   };
-  
+
   // Track open state for submenus
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({
     "Tax Calculator": pathname?.startsWith("/dashboard/tax") || false,
@@ -86,10 +92,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
   const toggleSubmenu = (menuName: string, e: React.MouseEvent) => {
     e.preventDefault();
-    setOpenMenus(prev => ({ ...prev, [menuName]: !prev[menuName] }));
+    setOpenMenus((prev) => ({ ...prev, [menuName]: !prev[menuName] }));
   };
 
-  const isProjectWorkspace = pathname?.startsWith("/dashboard/projects/") && pathname !== "/dashboard/projects";
+  const isProjectWorkspace =
+    pathname?.startsWith("/dashboard/projects/") &&
+    pathname !== "/dashboard/projects";
   const projectId = isProjectWorkspace ? pathname.split("/")[3] : null;
 
   const projectMenuItems: MenuItem[] = [
@@ -112,13 +120,24 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       name: "Operational",
       href: `/dashboard/projects/${projectId}/operational`,
       icon: Wallet,
+      subItems: [
+        {
+          name: "Overview",
+          href: `/dashboard/projects/${projectId}/operational/overview`,
+          icon: LayoutDashboard,
+        },
+        {
+          name: "Operational Report",
+          href: `/dashboard/projects/${projectId}/operational/report`,
+          icon: FileText,
+        },
+      ],
     },
     {
       name: "Documents",
       href: `/dashboard/projects/${projectId}/documents`,
       icon: FileText,
     },
-
   ];
 
   // Menu Utama
@@ -134,24 +153,31 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       icon: Activity,
     },
     {
-      name: "Invoice Generator",
-      href: "/dashboard/invoiceGenerator",
-      icon: FileText,
+      name: "Document",
+      href: "/dashboard/documentGenerator",
+      icon: Activity,
+      subItems: [
+        {
+          name: "Invoice Generator",
+          href: "/dashboard/documentGenerator/invoiceGenerator",
+          icon: FileText
+        },
+        {
+          name: "Proposal Generator",
+          href: "/dashboard/documentGenerator/proposal",
+          icon: LetterText
+        },
+      ],
     },
     {
-      name: "Proposal Generator",
-      href: "/dashboard/proposal",
-      icon: ClipboardPen,
-    },
-    { 
       name: "Tax Calculator",
-      href: "/dashboard/tax", 
+      href: "/dashboard/tax",
       icon: Calculator,
       subItems: [
-        { name: "Dashboard & Keluaran", href: "/dashboard/tax" },
-        { name: "PPN Masukan", href: "/dashboard/tax/ppn-masukan" },
-        { name: "PPh 21", href: "/dashboard/tax/pph21" },
-      ]
+        { name: "Tax Overview", href: "/dashboard/tax", icon: LayoutDashboard },
+        { name: "PPN Masukan", href: "/dashboard/tax/ppn-masukan", icon: CalculatorIcon },
+        { name: "PPh 21", href: "/dashboard/tax/pph21", icon: CalculatorIcon },
+      ],
     },
     {
       name: "Scheduler",
@@ -222,115 +248,126 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
           {/* Menu Navigation */}
           <nav className="px-3 space-y-1">
-            {isProjectWorkspace && (
-              <div className="mb-2 px-1">
-              </div>
-            )}
-            
-            {(isProjectWorkspace ? projectMenuItems : mainMenuItems).map((item) => {
-              const Icon = item.icon;
-              const hasSubItems = item.subItems && item.subItems.length > 0;
-              
-              // Determine if the main item is active
-              let isActive = false;
-              if (hasSubItems) {
-                // For parent items, consider active if pathname starts with href (exact match not required)
-                isActive = pathname === item.href || (pathname?.startsWith(item.href + '/') && true);
-              } else {
-                isActive = pathname === item.href;
-              }
+            {isProjectWorkspace && <div className="mb-2 px-1"></div>}
 
-              const isSubMenuOpen = openMenus[item.name];
+            {(isProjectWorkspace ? projectMenuItems : mainMenuItems).map(
+              (item) => {
+                const Icon = item.icon;
+                const hasSubItems = item.subItems && item.subItems.length > 0;
 
-              return (
-                <div key={item.name} className="flex flex-col">
-                  {hasSubItems ? (
-                    // Button for dropdown toggle
-                    <button
-                      onClick={(e) => toggleSubmenu(item.name, e)}
-                      className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative w-full ${
-                        isActive
-                          ? "bg-gradient-to-r from-brand-cyan/20 to-[#004b87]/30 light:from-brand-blue/10 light:to-brand-cyan/10 text-white light:text-[#004b87] border border-brand-cyan/30 light:border-brand-blue/30 shadow-lg shadow-brand-cyan/10"
-                          : "text-gray-400 light:text-slate-600 hover:text-white light:hover:text-slate-900 hover:bg-white/5 light:hover:bg-slate-100 border border-transparent"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            isActive
-                              ? "bg-brand-cyan/20 light:bg-brand-blue text-brand-cyan light:text-white"
-                              : "text-gray-400 light:text-slate-500 group-hover:text-white light:group-hover:text-slate-900"
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <span>{item.name}</span>
-                      </div>
-                      <div className="flex items-center">
-                        {isSubMenuOpen ? (
-                          <ChevronDown className={`w-4 h-4 transition-transform ${isActive ? "text-brand-cyan" : "text-gray-500 group-hover:text-white"}`} />
-                        ) : (
-                          <ChevronRight className={`w-4 h-4 transition-transform ${isActive ? "text-brand-cyan" : "text-gray-500 group-hover:text-white"}`} />
-                        )}
-                      </div>
-                    </button>
-                  ) : (
-                    // Regular Link
-                    <Link
-                      href={item.href}
-                      onClick={onClose}
-                      className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative ${
-                        isActive
-                          ? "bg-gradient-to-r from-brand-cyan/20 to-[#004b87]/30 light:from-brand-blue/10 light:to-brand-cyan/10 text-white light:text-[#004b87] border border-brand-cyan/30 light:border-brand-blue/30 shadow-lg shadow-brand-cyan/10"
-                          : "text-gray-400 light:text-slate-600 hover:text-white light:hover:text-slate-900 hover:bg-white/5 light:hover:bg-slate-100 border border-transparent"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            isActive
-                              ? "bg-brand-cyan/20 light:bg-brand-blue text-brand-cyan light:text-white"
-                              : "text-gray-400 light:text-slate-500 group-hover:text-white light:group-hover:text-slate-900"
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <span>{item.name}</span>
-                      </div>
-                      {isActive ? (
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand-cyan light:bg-[#004b87]" />
-                      ) : (
-                        <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-gray-500" />
-                      )}
-                    </Link>
-                  )}
+                // Determine if the main item is active
+                let isActive = false;
+                if (hasSubItems) {
+                  // For parent items, consider active if pathname starts with href (exact match not required)
+                  isActive =
+                    pathname === item.href ||
+                    (pathname?.startsWith(item.href + "/") && true);
+                } else {
+                  isActive = pathname === item.href;
+                }
 
-                  {/* Submenu Dropdown Items */}
-                  {hasSubItems && isSubMenuOpen && (
-                    <div className="mt-1 space-y-1 pl-11 pr-2 pb-2">
-                      {item.subItems?.map(sub => {
-                        const isSubActive = pathname === sub.href;
-                        return (
-                          <Link
-                            key={sub.name}
-                            href={sub.href}
-                            onClick={onClose}
-                            className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 relative ${
-                              isSubActive
-                                ? "text-brand-cyan bg-brand-cyan/10"
-                                : "text-gray-400 hover:text-white hover:bg-slate-600"
+                const isSubMenuOpen = openMenus[item.name];
+
+                return (
+                  <div key={item.name} className="flex flex-col">
+                    {hasSubItems ? (
+                      // Button for dropdown toggle
+                      <button
+                        onClick={(e) => toggleSubmenu(item.name, e)}
+                        className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative w-full ${
+                          isActive
+                            ? "bg-gradient-to-r from-brand-cyan/20 to-[#004b87]/30 light:from-brand-blue/10 light:to-brand-cyan/10 text-white light:text-[#004b87] border border-brand-cyan/30 light:border-brand-blue/30 shadow-lg shadow-brand-cyan/10"
+                            : "text-gray-400 light:text-slate-600 hover:text-white light:hover:text-slate-900 hover:bg-white/5 light:hover:bg-slate-100 border border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              isActive
+                                ? "bg-brand-cyan/20 light:bg-brand-blue text-brand-cyan light:text-white"
+                                : "text-gray-400 light:text-slate-500 group-hover:text-white light:group-hover:text-slate-900"
                             }`}
                           >
-                            <span>{sub.name}</span>
-                            {isSubActive && <div className="w-1 h-1 rounded-full bg-brand-cyan" />}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <span>{item.name}</span>
+                        </div>
+                        <div className="flex items-center">
+                          {isSubMenuOpen ? (
+                            <ChevronDown
+                              className={`w-4 h-4 transition-transform ${isActive ? "text-brand-cyan" : "text-gray-500 group-hover:text-white"}`}
+                            />
+                          ) : (
+                            <ChevronRight
+                              className={`w-4 h-4 transition-transform ${isActive ? "text-brand-cyan" : "text-gray-500 group-hover:text-white"}`}
+                            />
+                          )}
+                        </div>
+                      </button>
+                    ) : (
+                      // Regular Link
+                      <Link
+                        href={item.href}
+                        onClick={onClose}
+                        className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative ${
+                          isActive
+                            ? "bg-gradient-to-r from-brand-cyan/20 to-[#004b87]/30 light:from-brand-blue/10 light:to-brand-cyan/10 text-white light:text-[#004b87] border border-brand-cyan/30 light:border-brand-blue/30 shadow-lg shadow-brand-cyan/10"
+                            : "text-gray-400 light:text-slate-600 hover:text-white light:hover:text-slate-900 hover:bg-white/5 light:hover:bg-slate-100 border border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              isActive
+                                ? "bg-brand-cyan/20 light:bg-brand-blue text-brand-cyan light:text-white"
+                                : "text-gray-400 light:text-slate-500 group-hover:text-white light:group-hover:text-slate-900"
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <span>{item.name}</span>
+                        </div>
+                        {isActive ? (
+                          <div className="w-1.5 h-1.5 rounded-full bg-brand-cyan light:bg-[#004b87]" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-gray-500" />
+                        )}
+                      </Link>
+                    )}
+
+                    {/* Submenu Dropdown Items */}
+                    {hasSubItems && isSubMenuOpen && (
+                      <div className="mt-1 space-y-1 pl-11 pr-2 pb-2">
+                        {item.subItems?.map((sub) => {
+                          const isSubActive = pathname === sub.href;
+                          const SubIcon = sub.icon;
+                          return (
+                            <Link
+                              key={sub.name}
+                              href={sub.href}
+                              onClick={onClose}
+                              className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 relative ${
+                                isSubActive
+                                  ? "text-brand-cyan bg-brand-cyan/10"
+                                  : "text-gray-400 hover:text-white hover:bg-slate-600"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {SubIcon && <SubIcon className="w-3.5 h-3.5" />}
+                                <span>{sub.name}</span>
+                              </div>
+                              {isSubActive && (
+                                <div className="w-1 h-1 rounded-full bg-brand-cyan" />
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              },
+            )}
           </nav>
         </div>
 
@@ -358,7 +395,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 </Link>
               );
             })}
-            
+
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-400/10 transition-all duration-200 group"
@@ -369,7 +406,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           </div>
 
           {/* User Profile Summary Card */}
-          <Link href="/dashboard/profile" onClick={onClose} className="block group">
+          <Link
+            href="/dashboard/profile"
+            onClick={onClose}
+            className="block group"
+          >
             <div className="p-3 rounded-xl bg-white/5 light:bg-white border border-white/10 light:border-slate-200/80 shadow-sm flex items-center gap-3 transition-colors group-hover:bg-white/10 light:group-hover:bg-slate-50 cursor-pointer">
               <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-[#004b87] to-brand-cyan flex items-center justify-center text-white font-bold text-xs shadow-md flex-shrink-0">
                 {userInfo.initials}

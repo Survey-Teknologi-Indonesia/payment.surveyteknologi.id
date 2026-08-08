@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, use, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -22,6 +22,11 @@ export default function ProjectWorkspacePage({
 }) {
   const { id } = use(params);
 
+  const [userLevel, setUserLevel] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserLevel(localStorage.getItem("userLevel"));
+  }, []);
   // Dummy data based on params.id
   const project = {
     id: id,
@@ -82,15 +87,18 @@ export default function ProjectWorkspacePage({
   return (
     <div className="max-w-6xl mx-auto pb-24 text-slate-100 light:text-slate-900">
       {/* 1. Top Navigation */}
-      <div className="mb-2">
-        <Link
-          href="/dashboard/projects"
-          className="inline-flex items-center gap-2 text-sm text-slate-400 light:text-slate-500 hover:text-slate-200 light:hover:text-slate-700 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Projects
-        </Link>
-      </div>
+      {userLevel !== "level-d" && (
+        <div className="mb-2">
+          <Link
+            href="/dashboard/projects"
+            className="inline-flex items-center gap-2 text-sm text-slate-400 light:text-slate-500 hover:text-slate-200 light:hover:text-slate-700 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Projects
+          </Link>
+        </div>
+      )}
+
 
       {/* 2. Page Header (Linear Style) */}
       <header>

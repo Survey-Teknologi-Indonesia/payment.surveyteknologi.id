@@ -112,15 +112,6 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="space-y-2 animate-in fade-in duration-500 max-w-7xl mx-auto p-6 ">
-      <div className="mb-4">
-        <Link
-          href={`/dashboard/projects/${id}`}
-          className="inline-flex items-center gap-2 text-sm text-slate-400 light:text-slate-500 hover:text-slate-200 light:hover:text-slate-700 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Projects
-        </Link>
-      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* KOLOM KIRI: FORM INPUT (Tidak akan ikut tercetak) */}
         <div className="rounded-2xl bg-[#121826]/90 light:bg-white p-6 border border-slate-800/80 light:border-slate-200 shadow-lg print:hidden">

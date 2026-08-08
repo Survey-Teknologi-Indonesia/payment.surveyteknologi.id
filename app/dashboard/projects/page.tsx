@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, Filter, Plus, ChevronRight, Briefcase, FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 // Dummy Data for Projects
 const projects = [
@@ -23,7 +24,15 @@ const projects = [
 ];
 
 export default function ProjectsHubPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const level = localStorage.getItem("userLevel");
+    if (level === "level-d") {
+      router.replace("/dashboard/projects/pln-es");
+    }
+  }, [router]);
 
   const filteredProjects = projects.filter((p) => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 

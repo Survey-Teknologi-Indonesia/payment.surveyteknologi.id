@@ -63,6 +63,7 @@ html.light .bg-tech-grid {
   body * {
     visibility: hidden;
   }
+
   #invoice-printable, #invoice-printable * {
     visibility: visible;
   }
@@ -75,7 +76,6 @@ html.light .bg-tech-grid {
     box-shadow: none !important;
   }
 
-
   #printable-gantt, #printable-gantt * {
     visibility: visible;
   }
@@ -84,21 +84,11 @@ html.light .bg-tech-grid {
     position: absolute;
     left: 0;
     top: 0;
-    width: 100vw;
-    /* Remove padding/margins and force layout to stretch naturally */
+    width: 100% !important;
     height: auto !important;
     overflow: visible !important;
     box-shadow: none !important;
     border: none !important;
-  }
-  
-  #printable-gantt > div:first-child {
-    width: 25% !important; 
-    overflow: visible !important;
-  }
-
-  #printable-gantt > div:last-child {
-    width: 75% !important; /* Make Gantt chart full width */
-    overflow: visible !important;
+    background: white !important;
   }
 }

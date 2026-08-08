@@ -209,7 +209,7 @@ export default function HelpSupportPage() {
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
                 <tr>
                   <th className="px-6 py-4">ID Tiket</th>
-                  {/* <th className="px-6 py-4">Pengirim</th> */}
+                  {isAdmin && <th className="px-6 py-4">Pengirim</th>}
                   <th className="px-6 py-4">Tanggal</th>
                   <th className="px-6 py-4">Kendala</th>
                   <th className="px-6 py-4">Status</th>
@@ -248,7 +248,7 @@ export default function HelpSupportPage() {
                       <td className="px-6 py-4 font-mono text-xs text-slate-500">
                         {ticket.tickets_id.split("-")[0]}
                       </td>
-                      <td className="px-6 py-4 font-medium">{ticket.user}</td>
+                      {isAdmin && <td className="px-6 py-4 font-medium">{ticket.user}</td>}
                       <td className="px-6 py-4">
                         {/* {ticket.date instanceof Date
                           ? (ticket.date as Date).toLocaleDateString("id-ID")

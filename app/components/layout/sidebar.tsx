@@ -29,6 +29,9 @@ import {
   ListChecks,
   LetterText,
   CalculatorIcon,
+  DollarSign,
+  FileTerminal,
+  Wrench
 } from "lucide-react";
 
 interface SidebarProps {
@@ -148,14 +151,31 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       icon: Layers,
     },
     {
-      name: "Invoice Tracker",
-      href: "/dashboard/invoiceTracker",
-      icon: Activity,
+      name: "Finance & Billings",
+      href: "/dashboard/finance&billings",
+      icon: DollarSign,
+      subItems: [
+        {
+          name: "Invoice Tracker",
+          href: "/dashboard/finance&billings/invoiceTracker",
+          icon: FileText,
+        },
+        {
+          name: "Cash FLow",
+          href: "/dashboard/finance&billings/cashflow",
+          icon: FileText,
+        },
+        {
+          name: "Billings",
+          href: "/dashboard/finance&billings/billings",
+          icon: FileText,
+        },
+      ],
     },
     {
       name: "Document",
       href: "/dashboard/documentGenerator",
-      icon: Activity,
+      icon: FileTerminal,
       subItems: [
         {
           name: "Invoice Generator",
@@ -180,9 +200,16 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       ],
     },
     {
-      name: "Scheduler",
-      href: "/dashboard/scheduler",
-      icon: CalendarClock,
+      name: "Tools",
+      href: "/dashboard/tools",
+      icon: Wrench,
+      subItems: [
+        {
+          name: "Scheduler",
+          href: "/dashboard/tools/scheduler",
+          icon: CalendarClock,
+        },
+      ]
     },
     {
       name: "Assets",

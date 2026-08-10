@@ -4,33 +4,35 @@ import React, { useState, useEffect } from 'react';
 import { UploadCloud, Loader2 } from "lucide-react";
 import { createClient } from '@/utils/supabase/client';
 
-interface InvoiceItem {
+interface TaxObject {
   id: string;
-  client: string;
+  transaction_id: string;
+  transaction_description: string;
+  tax_name: string;
+  tax_type: string;
+  base_amount: number;
+  tax_amount: number;
+  status: string;
   date: string;
-  dpp: number;
-  ppn: number;
-  pph23: number;
-  status: 'Paid' | 'Pending';
 }
 
 export default function TaxDashboard() {
-  const [reportingPeriod, setReportingPeriod] = useState("Juli 2026");
-  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [reportingPeriod, setReportingPeriod] = useState("Semua Periode");
+  const [taxObjects, setTaxObjects] = useState<TaxObject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, invoiceId: string) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, taxObjectId: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingId(invoiceId);
+    setUploadingId(taxObjectId);
     try {
       const supabase = createClient();
       const fileExt = file.name.split('.').pop();
-      const fileName = `${invoiceId}_${Date.now()}.${fileExt}`;
-      // Simpan di bucket "sti" folder "tax/pph23"
-      const filePath = `tax/pph23/${fileName}`;
+      const fileName = `${taxObjectId}_${Date.now()}.${fileExt}`;
+      // Simpan di bucket "sti" folder "tax/dokumen"
+      const filePath = `tax/dokumen/${fileName}`;
 
       const { data, error } = await supabase.storage
         .from('sti')
@@ -38,7 +40,7 @@ export default function TaxDashboard() {
 
       if (error) throw error;
       
-      alert(`Dokumen Bukti Potong PPh 23 untuk invoice ${invoiceId} berhasil diupload!`);
+      alert(`Dokumen lampiran untuk objek pajak berhasil diupload!`);
     } catch (error: any) {
       console.error("Upload error:", error);
       alert("Gagal mengupload file: " + error.message);
@@ -51,27 +53,23 @@ export default function TaxDashboard() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const { getInvoices } = await import('@/app/lib/actions/invoiceActions');
-      const resInv = await getInvoices();
-      if (resInv.success && resInv.data) {
-        const formatted = resInv.data.map((row: any) => {
+      const { getTaxObjects } = await import('@/app/lib/actions/taxActions');
+      const res = await getTaxObjects();
+      if (res.success && res.data) {
+        const formatted = res.data.map((row: any) => {
           let dateStr = row.date;
           if (row.date && typeof row.date !== 'string') {
              const d = new Date(row.date);
              dateStr = d.toLocaleDateString('en-GB'); 
           }
-          const dppValue = Number(row.dpp);
           return {
-            id: row.invoice_id,
-            client: row.customer,
+            ...row,
             date: dateStr,
-            dpp: dppValue,
-            ppn: Math.round(dppValue * 0.12),
-            pph23: Math.round(dppValue * 0.02),
-            status: row.status,
+            base_amount: Number(row.base_amount),
+            tax_amount: Number(row.tax_amount),
           };
         });
-        setInvoices(formatted);
+        setTaxObjects(formatted);
       }
     } catch (error) {
       console.error("Failed to load tax data", error);
@@ -85,9 +83,9 @@ export default function TaxDashboard() {
   }, [reportingPeriod]);
 
   // Calculations
-  const totalDPP = invoices.reduce((acc, item) => acc + item.dpp, 0);
-  const totalPPNKeluaran = invoices.reduce((acc, item) => acc + item.ppn, 0);
-  const totalPPh23 = invoices.reduce((acc, item) => acc + item.pph23, 0);
+  const totalDPP = taxObjects.reduce((acc, item) => acc + item.base_amount, 0);
+  const totalPPNKeluaran = taxObjects.filter(t => t.tax_type === 'Keluaran' && t.tax_name.includes('PPN')).reduce((acc, item) => acc + item.tax_amount, 0);
+  const totalPotongan = taxObjects.filter(t => t.tax_type === 'Potongan').reduce((acc, item) => acc + item.tax_amount, 0);
 
   const formatIDR = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 
@@ -108,7 +106,7 @@ export default function TaxDashboard() {
               Periode Laporan Masa Pajak: <span className="font-semibold text-slate-700">{reportingPeriod}</span>
               <br />
               <span className="text-[11px] text-rose-500 font-medium bg-rose-50 px-2 py-0.5 rounded border border-rose-100 inline-block mt-2">
-                * Tabel menampilkan data berdasarkan Tanggal Penerbitan Faktur Pajak (Invoice), bukan tanggal pelunasan.
+                * Tabel menampilkan data yang ditandai sebagai objek pajak dari modul Cashflow.
               </span>
             </p>
           </div>
@@ -124,74 +122,86 @@ export default function TaxDashboard() {
 
         {/* 3 CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center">
-            <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">TOTAL PEREDARAN BRUTO (DPP)</h2>
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center relative overflow-hidden group hover:border-slate-300 transition-colors">
+            <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">TOTAL DASAR PENGENAAN PAJAK (DPP)</h2>
             <p className="text-3xl font-bold text-slate-900 mb-1">{formatIDR(totalDPP)}</p>
-            <p className="text-[11px] text-slate-400">Dasar Pengenaan Pajak Bulanan</p>
+            <p className="text-[11px] text-slate-400">Total Basis Transaksi</p>
           </div>
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center">
-            <h2 className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-2">TOTAL PPN KELUARAN (12%)</h2>
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center relative overflow-hidden group hover:border-indigo-300 transition-colors">
+            <h2 className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-2">TOTAL PPN KELUARAN</h2>
             <p className="text-3xl font-bold text-indigo-900 mb-1">{formatIDR(totalPPNKeluaran)}</p>
             <p className="text-[11px] text-indigo-500">Siap input ke SPT Masa PPN</p>
           </div>
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center">
-            <h2 className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-2">TOTAL PPH 23 DIPOTONG KLIEN</h2>
-            <p className="text-3xl font-bold text-slate-900 mb-1">{formatIDR(totalPPh23)}</p>
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center relative overflow-hidden group hover:border-emerald-300 transition-colors">
+            <h2 className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-2">TOTAL POTONGAN PAJAK</h2>
+            <p className="text-3xl font-bold text-slate-900 mb-1">{formatIDR(totalPotongan)}</p>
             <p className="text-[11px] text-emerald-600">Kredit pajak / Bukti potong</p>
           </div>
         </div>
 
         {/* TABLE */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
-          <div className="px-6 py-4 border-b border-slate-50 flex justify-between items-center">
-            <h2 className="font-semibold text-slate-800">Daftar Transaksi Objek Pajak Periode Ini</h2>
-            <span className="text-xs text-slate-400">Sinkron otomatis dari modul Invoice</span>
+          <div className="px-6 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+            <h2 className="font-semibold text-slate-800 text-sm">Daftar Transaksi Objek Pajak</h2>
+            <span className="text-xs text-slate-400">Terintegrasi otomatis dari Cashflow</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="text-slate-500 border-b border-slate-100 bg-slate-50/50">
-                  <th className="py-3 px-6 font-semibold uppercase tracking-wider">NO. INVOICE</th>
-                  <th className="py-3 px-6 font-semibold uppercase tracking-wider">KLIEN / CUSTOMER</th>
-                  <th className="py-3 px-6 font-semibold uppercase tracking-wider">TANGGAL</th>
-                  <th className="py-3 px-6 font-semibold uppercase tracking-wider">NILAI DPP (RP)</th>
-                  <th className="py-3 px-6 font-semibold uppercase tracking-wider">PPN 12% (RP)</th>
-                  <th className="py-3 px-6 font-semibold uppercase tracking-wider">PPH 23 (2%)</th>
-                  <th className="py-3 px-6 font-semibold uppercase tracking-wider text-center">STATUS BAYAR</th>
-                  <th className="py-3 px-6 font-semibold uppercase tracking-wider text-center">BUKTI POTONG PPh 23</th>
+                <tr className="text-slate-500 border-b border-slate-100 bg-white">
+                  <th className="py-4 px-6 font-semibold uppercase tracking-wider">TANGGAL</th>
+                  <th className="py-4 px-6 font-semibold uppercase tracking-wider">NAMA PAJAK</th>
+                  <th className="py-4 px-6 font-semibold uppercase tracking-wider">TIPE</th>
+                  <th className="py-4 px-6 font-semibold uppercase tracking-wider text-right">NILAI DPP (RP)</th>
+                  <th className="py-4 px-6 font-semibold uppercase tracking-wider text-right">NOMINAL PAJAK (RP)</th>
+                  <th className="py-4 px-6 font-semibold uppercase tracking-wider text-center">STATUS</th>
+                  <th className="py-4 px-6 font-semibold uppercase tracking-wider text-center">LAMPIRAN</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {invoices.map((inv, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition">
-                    <td className="py-4 px-6 text-slate-700">{inv.id}</td>
-                    <td className="py-4 px-6 font-medium text-slate-700">{inv.client}</td>
-                    <td className="py-4 px-6 text-slate-500">{inv.date}</td>
-                    <td className="py-4 px-6 text-slate-900 font-medium">{formatIDR(inv.dpp)}</td>
-                    <td className="py-4 px-6 text-indigo-600 font-medium">{formatIDR(inv.ppn)}</td>
-                    <td className="py-4 px-6 text-emerald-600 font-medium">{formatIDR(inv.pph23)}</td>
+                {taxObjects.map((tax, idx) => (
+                  <tr key={tax.id} className="hover:bg-slate-50/50 transition">
+                    <td className="py-4 px-6 text-slate-500 whitespace-nowrap">{tax.date}</td>
+                    <td className="py-4 px-6 font-medium text-slate-800">
+                      {tax.tax_name}
+                      <div className="text-[10px] font-normal text-slate-400 mt-0.5 truncate max-w-[150px]" title={tax.transaction_description}>
+                        {tax.transaction_description}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 text-slate-600">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                        tax.tax_type === 'Keluaran' ? 'bg-indigo-50 text-indigo-600' :
+                        tax.tax_type === 'Masukan' ? 'bg-sky-50 text-sky-600' : 'bg-emerald-50 text-emerald-600'
+                      }`}>
+                        {tax.tax_type}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-slate-900 text-right">{formatIDR(tax.base_amount)}</td>
+                    <td className="py-4 px-6 font-bold text-slate-900 text-right">{formatIDR(tax.tax_amount)}</td>
                     <td className="py-4 px-6 text-center">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-medium border ${
-                        inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                        tax.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                        tax.status === 'Reported' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
+                        'bg-amber-50 text-amber-600 border-amber-100'
                       }`}>
-                        {inv.status}
+                        {tax.status}
                       </span>
                     </td>
                     <td className="py-4 px-6 text-center">
                       <input 
                         type="file"
-                        id={`upload-${inv.id}`}
+                        id={`upload-${tax.id}`}
                         className="hidden"
                         accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => handleUpload(e, inv.id)}
+                        onChange={(e) => handleUpload(e, tax.id)}
                       />
                       <button 
-                        onClick={() => document.getElementById(`upload-${inv.id}`)?.click()}
-                        disabled={uploadingId === inv.id}
+                        onClick={() => document.getElementById(`upload-${tax.id}`)?.click()}
+                        disabled={uploadingId === tax.id}
                         className="inline-flex items-center justify-center p-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 border border-slate-200 hover:border-emerald-200 transition-colors shadow-sm group cursor-pointer disabled:opacity-50"
-                        title="Upload Bukti Potong PPh 23"
+                        title="Upload Dokumen/Bukti Potong"
                       >
-                        {uploadingId === inv.id ? (
+                        {uploadingId === tax.id ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <UploadCloud className="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -200,8 +210,8 @@ export default function TaxDashboard() {
                     </td>
                   </tr>
                 ))}
-                {invoices.length === 0 && (
-                  <tr><td colSpan={8} className="py-6 text-center text-slate-400">Belum ada transaksi</td></tr>
+                {taxObjects.length === 0 && (
+                  <tr><td colSpan={7} className="py-12 text-center text-slate-400">Belum ada objek pajak yang ditandai dari Cashflow</td></tr>
                 )}
               </tbody>
             </table>
@@ -211,11 +221,12 @@ export default function TaxDashboard() {
         {/* BOTTOM BANNER */}
         <div className="bg-[#121826] p-6 rounded-2xl shadow-sm text-slate-300">
            <h3 className="font-bold text-white mb-2 flex items-center gap-2">
-              <span className="text-xl">💡</span> Panduan Cepat Pengisian DJP Online:
+              <span className="text-xl">💡</span> Panduan Pengisian DJP Online:
            </h3>
            <div className="space-y-1 text-xs">
              <p>1. Gunakan angka pada kotak <span className="text-indigo-400 font-semibold">Total PPN Keluaran</span> untuk diinput ke formulir e-Faktur / SPT Masa PPN bulanan.</p>
-             <p>2. Simpan Bukti Potong PPh Pasal 23 dari masing-masing klien untuk dicatatkan sebagai kredit pajak pada SPT Tahunan Badan PT STI.</p>
+             <p>2. Simpan Bukti Potong (seperti PPh 23) dari klien untuk dicatatkan sebagai kredit pajak pada SPT Tahunan Badan.</p>
+             <p>3. Anda dapat menandai objek pajak baru langsung melalui modul <strong>Cashflow</strong>.</p>
            </div>
         </div>
 

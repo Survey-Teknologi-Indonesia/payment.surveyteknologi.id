@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { getChatContacts, getOrCreateConversation, getMessages, sendMessage, getCurrentUserId } from "../../lib/actions/chatActions";
+import { getChatContacts, getOrCreateConversation, getMessages, sendMessage, getCurrentUserId, getLatestMessagesPerContact, markConversationAsRead } from "../../lib/actions/chatActions";
 import { supabase } from "../../lib/supabaseClient";
 import { Search, Send, User, Clock, CheckCircle2 } from "lucide-react";
 
@@ -15,7 +15,10 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [latestMessages, setLatestMessages] = useState<Record<string, any>>({});
+  const [contactToConvo, setContactToConvo] = useState<Record<string, string>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -24,9 +27,17 @@ export default function ChatPage() {
       const userId = await getCurrentUserId();
       setCurrentUserId(userId || null);
 
-      const res = await getChatContacts();
+      const [res, latestRes] = await Promise.all([
+        getChatContacts(),
+        getLatestMessagesPerContact()
+      ]);
+      
       if (res.success) {
         setContacts(res.data || []);
+      }
+      if (latestRes.success) {
+        setLatestMessages(latestRes.data || {});
+        setContactToConvo(latestRes.contactToConvo || {});
       }
       setIsLoading(false);
     }
@@ -37,10 +48,28 @@ export default function ChatPage() {
       setOnlineUsers(customEvent.detail);
     };
 
+    const handleNewMessage = (e: Event) => {
+      const customEvent = e as CustomEvent<any>;
+      const newMsg = customEvent.detail;
+      
+      setContactToConvo(prevMap => {
+        const contactId = Object.keys(prevMap).find(k => prevMap[k] === newMsg.conversation_id);
+        if (contactId) {
+          setLatestMessages(prev => ({
+            ...prev,
+            [contactId]: newMsg
+          }));
+        }
+        return prevMap;
+      });
+    };
+
     window.addEventListener("presence_sync", handlePresence);
+    window.addEventListener("new_chat_message", handleNewMessage);
 
     return () => {
       window.removeEventListener("presence_sync", handlePresence);
+      window.removeEventListener("new_chat_message", handleNewMessage);
     };
   }, []);
 
@@ -75,6 +104,16 @@ export default function ChatPage() {
       
       if (convoRes.success && isMounted) {
         setActiveConversationId(convoRes.conversationId);
+        
+        // Update convo map and mark as read
+        setContactToConvo(prev => ({...prev, [selectedContact.account_id]: convoRes.conversationId}));
+        await markConversationAsRead(convoRes.conversationId);
+        window.dispatchEvent(new Event("chat_read"));
+        
+        setLatestMessages(prev => ({
+          ...prev,
+          [selectedContact.account_id]: { ...prev[selectedContact.account_id], is_read: true }
+        }));
         
         const msgRes = await getMessages(convoRes.conversationId);
         if (msgRes.success) {
@@ -166,7 +205,23 @@ export default function ChatPage() {
           {contacts.map((contact) => (
             <button
               key={contact.account_id}
-              onClick={() => setSelectedContact(contact)}
+              onClick={async () => {
+                setSelectedContact(contact);
+                const convoId = contactToConvo[contact.account_id];
+                if (convoId) {
+                  await markConversationAsRead(convoId);
+                  window.dispatchEvent(new Event("chat_read"));
+                  setLatestMessages(prev => {
+                    if (prev[contact.account_id]) {
+                      return {
+                        ...prev,
+                        [contact.account_id]: { ...prev[contact.account_id], is_read: true }
+                      };
+                    }
+                    return prev;
+                  });
+                }
+              }}
               className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${
                 selectedContact?.account_id === contact.account_id 
                   ? "bg-brand-cyan/10 border border-brand-cyan/20" 
@@ -181,9 +236,20 @@ export default function ChatPage() {
               </div>
               <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-bold text-slate-900 truncate">{contact.name}</p>
-                <p className="text-xs text-slate-500 truncate capitalize">
-                  {onlineUsers.has(contact.account_id) ? 'Online' : contact.jabatan}
-                </p>
+                {latestMessages[contact.account_id] ? (
+                  <p className={`text-[13px] truncate ${
+                    latestMessages[contact.account_id].sender_id !== currentUserId && !latestMessages[contact.account_id].is_read 
+                      ? 'font-bold text-slate-900' 
+                      : 'text-slate-500'
+                  }`}>
+                    {latestMessages[contact.account_id].sender_id === currentUserId ? 'Anda: ' : ''}
+                    {latestMessages[contact.account_id].message}
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-500 truncate capitalize">
+                    {onlineUsers.has(contact.account_id) ? 'Online' : contact.jabatan}
+                  </p>
+                )}
               </div>
             </button>
           ))}

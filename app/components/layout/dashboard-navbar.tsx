@@ -12,6 +12,7 @@ import {
   Sparkles,
   MessageCircle,
 } from "lucide-react";
+import { checkHasUnreadMessages } from "@/app/lib/actions/chatActions";
 
 interface DashboardNavbarProps {
   onOpenSidebar?: () => void;
@@ -27,6 +28,7 @@ export default function DashboardNavbar({
   const router = useRouter();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
 
   useEffect(() => {
     // Detect current theme on mount
@@ -39,6 +41,27 @@ export default function DashboardNavbar({
       setTheme("dark");
       document.documentElement.classList.remove("light");
     }
+  }, []);
+
+  useEffect(() => {
+    async function initUnread() {
+      const res = await checkHasUnreadMessages();
+      if (res.success) {
+        setHasUnread(res.data || false);
+      }
+    }
+    initUnread();
+
+    const handleNewMsg = () => setHasUnread(true);
+    const handleChatRead = () => initUnread();
+
+    window.addEventListener("new_chat_message", handleNewMsg);
+    window.addEventListener("chat_read", handleChatRead);
+
+    return () => {
+      window.removeEventListener("new_chat_message", handleNewMsg);
+      window.removeEventListener("chat_read", handleChatRead);
+    };
   }, []);
 
   const toggleTheme = () => {
@@ -119,7 +142,9 @@ export default function DashboardNavbar({
           title="Notifications"
         >
           <MessageCircle className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-cyan animate-pulse" />
+          {hasUnread && (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-cyan animate-pulse" />
+          )}
         </button>
 
         {/* Tombol Logout Paling Kanan */}

@@ -6,6 +6,7 @@ import Sidebar from "../components/layout/sidebar";
 import DashboardNavbar from "../components/layout/dashboard-navbar";
 import { X } from "lucide-react";
 import PresenceManager from "../components/chat/PresenceManager";
+import GlobalChatListener from "../components/chat/GlobalChatListener";
 
 export default function DashboardLayout({children}: {children: React.ReactNode}) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -53,6 +54,7 @@ export default function DashboardLayout({children}: {children: React.ReactNode})
   return (
     <div className="min-h-screen print:min-h-auto flex bg-[#090d16] light:bg-slate-50 text-slate-100 light:text-slate-900 font-sans transition-colors duration-300 relative overflow-x-clip print:overflow-visible">
       <PresenceManager />
+      <GlobalChatListener />
       {/* 1. SIDEBAR KIRI */}
       {!isChatPage && (
         <div className="print:hidden">

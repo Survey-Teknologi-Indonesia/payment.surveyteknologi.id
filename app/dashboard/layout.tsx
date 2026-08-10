@@ -1,9 +1,11 @@
 "use client"
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Sidebar from "../components/layout/sidebar";
 import DashboardNavbar from "../components/layout/dashboard-navbar";
 import { X } from "lucide-react";
+import PresenceManager from "../components/chat/PresenceManager";
 
 export default function DashboardLayout({children}: {children: React.ReactNode}) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -14,6 +16,9 @@ export default function DashboardLayout({children}: {children: React.ReactNode})
   );
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const pathname = usePathname();
+
+  const isChatPage = pathname?.startsWith("/dashboard/chat");
 
   // Auto hide toast notification
   useEffect(() => {
@@ -47,13 +52,16 @@ export default function DashboardLayout({children}: {children: React.ReactNode})
 
   return (
     <div className="min-h-screen print:min-h-auto flex bg-[#090d16] light:bg-slate-50 text-slate-100 light:text-slate-900 font-sans transition-colors duration-300 relative overflow-x-clip print:overflow-visible">
+      <PresenceManager />
       {/* 1. SIDEBAR KIRI */}
-      <div className="print:hidden">
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      </div>
+      {!isChatPage && (
+        <div className="print:hidden">
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        </div>
+      )}
 
       {/* 2. AREA CONTENT UTAMA + NAVBAR ATAS */}
-      <div className="flex-1 flex flex-col min-w-0 md:ml-64 print:ml-0 print:overflow-visible">
+      <div className={`flex-1 flex flex-col min-w-0 ${isChatPage ? '' : 'md:ml-64'} print:ml-0 print:overflow-visible transition-all duration-300`}>
         {/* Top Navbar dengan Search Bar dan Tombol Logout */}
         <div className="print:hidden">
           <DashboardNavbar
@@ -83,7 +91,7 @@ export default function DashboardLayout({children}: {children: React.ReactNode})
             </button>
           </div>
         )}
-        <main className="p-6 w-full">
+        <main className={`p-4 sm:p-6 w-full h-[calc(100vh-80px)] ${isChatPage ? 'overflow-hidden' : 'overflow-y-auto'}`}>
             {children}
         </main>
       </div>

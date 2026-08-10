@@ -10,6 +10,7 @@ import {
   Menu,
   Bell,
   Sparkles,
+  MessageCircle,
 } from "lucide-react";
 
 interface DashboardNavbarProps {
@@ -61,6 +62,10 @@ export default function DashboardNavbar({
     }, 600);
   };
 
+  const toChat = () => {
+    router.push("/dashboard/chat");
+  }
+
   return (
     <header className="sticky top-0 z-40 w-full h-20 border-b border-white/10 light:border-slate-200 bg-[#090d16]/85 light:bg-slate-50/85 backdrop-blur-md transition-all duration-300 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
       
@@ -109,10 +114,11 @@ export default function DashboardNavbar({
 
         {/* Notification Bell */}
         <button
+          onClick={toChat}
           className="relative p-2.5 rounded-xl border border-white/10 light:border-slate-200/80 bg-white/5 light:bg-white text-gray-400 light:text-slate-600 hover:text-white light:hover:text-slate-900 transition-colors shadow-sm hidden sm:flex items-center justify-center cursor-pointer"
           title="Notifications"
         >
-          <Bell className="w-4 h-4" />
+          <MessageCircle className="w-4 h-4" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-cyan animate-pulse" />
         </button>
 

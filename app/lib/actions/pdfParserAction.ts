@@ -16,15 +16,27 @@ export async function parseInvoicePDF(formData: FormData) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // 1. Ekstrak teks mentah dari PDF
-    const pdfParse = (await import("pdf-parse")).default;
-    const textResult = await pdfParse(buffer);
-    const rawText = textResult.text;
+    let rawText = "";
+    let inlineData = null;
+
+    if (file.type === "application/pdf") {
+      // 1. Ekstrak teks mentah dari PDF
+      const pdfParse = (await import("pdf-parse")).default;
+      const textResult = await pdfParse(buffer);
+      rawText = textResult.text;
+    } else if (file.type.startsWith("image/")) {
+      inlineData = {
+        data: buffer.toString("base64"),
+        mimeType: file.type
+      };
+    } else {
+      return { success: false, message: "Format file tidak didukung. Harap unggah PDF atau Gambar." };
+    }
     
     // 2. Gunakan Gemini untuk mengekstrak data terstruktur dari teks mentah
     const prompt = `
       Anda adalah asisten akuntansi cerdas untuk PT Survey Teknologi Indonesia. 
-      Analisis teks invoice berikut dan ekstrak informasi penting ke dalam format JSON murni (tanpa markdown backtick jika memungkinkan, atau parse JSON langsung) dengan key berikut:
+      Analisis ${file.type.startsWith("image/") ? "gambar invoice" : "teks invoice"} berikut dan ekstrak informasi penting ke dalam format JSON murni (tanpa markdown backtick jika memungkinkan, atau parse JSON langsung) dengan key berikut:
       - invoice_id (string, contoh: "1001_STI/IMP/GPS/VI/2026")
       - customer (string, nama perusahaan klien)
       - date (string format YYYY-MM-DD)
@@ -34,13 +46,16 @@ export async function parseInvoicePDF(formData: FormData) {
       - phone (string)
       - items (array of object berisi rincian barang: item, description, qty, price, total)
 
-      Teks Invoice:
-      ${rawText}
+      ${file.type === "application/pdf" ? `Teks Invoice:\n${rawText}` : ""}
     `;
+
+    const requestContents = inlineData 
+      ? [prompt, { inlineData }]
+      : prompt;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.6-flash', // atau model yang sesuai
-      contents: prompt,
+      contents: requestContents,
       config: {
         responseMimeType: "application/json", // Memaksa output berupa JSON murni yang valid
       }

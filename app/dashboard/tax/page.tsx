@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
+import { UploadCloud, Loader2 } from "lucide-react";
+import { createClient } from '@/utils/supabase/client';
 
 interface InvoiceItem {
   id: string;
@@ -16,6 +18,35 @@ export default function TaxDashboard() {
   const [reportingPeriod, setReportingPeriod] = useState("Juli 2026");
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, invoiceId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingId(invoiceId);
+    try {
+      const supabase = createClient();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${invoiceId}_${Date.now()}.${fileExt}`;
+      // Simpan di bucket "sti" folder "tax/pph23"
+      const filePath = `tax/pph23/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('sti')
+        .upload(filePath, file, { upsert: true });
+
+      if (error) throw error;
+      
+      alert(`Dokumen Bukti Potong PPh 23 untuk invoice ${invoiceId} berhasil diupload!`);
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      alert("Gagal mengupload file: " + error.message);
+    } finally {
+      setUploadingId(null);
+      e.target.value = ''; // Reset input
+    }
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -73,7 +104,13 @@ export default function TaxDashboard() {
           <div>
             <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest">PT SURVEY TEKNOLOGI INDONESIA</span>
             <h1 className="text-xl font-bold text-slate-900 mt-1">Rekapitulasi Pajak & Ready SPT</h1>
-            <p className="text-sm text-slate-500 mt-1">Periode Laporan Masa Pajak: <span className="font-semibold text-slate-700">{reportingPeriod}</span></p>
+            <p className="text-sm text-slate-500 mt-1">
+              Periode Laporan Masa Pajak: <span className="font-semibold text-slate-700">{reportingPeriod}</span>
+              <br />
+              <span className="text-[11px] text-rose-500 font-medium bg-rose-50 px-2 py-0.5 rounded border border-rose-100 inline-block mt-2">
+                * Tabel menampilkan data berdasarkan Tanggal Penerbitan Faktur Pajak (Invoice), bukan tanggal pelunasan.
+              </span>
+            </p>
           </div>
           <div>
             <button 
@@ -121,6 +158,7 @@ export default function TaxDashboard() {
                   <th className="py-3 px-6 font-semibold uppercase tracking-wider">PPN 12% (RP)</th>
                   <th className="py-3 px-6 font-semibold uppercase tracking-wider">PPH 23 (2%)</th>
                   <th className="py-3 px-6 font-semibold uppercase tracking-wider text-center">STATUS BAYAR</th>
+                  <th className="py-3 px-6 font-semibold uppercase tracking-wider text-center">BUKTI POTONG PPh 23</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -139,10 +177,31 @@ export default function TaxDashboard() {
                         {inv.status}
                       </span>
                     </td>
+                    <td className="py-4 px-6 text-center">
+                      <input 
+                        type="file"
+                        id={`upload-${inv.id}`}
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => handleUpload(e, inv.id)}
+                      />
+                      <button 
+                        onClick={() => document.getElementById(`upload-${inv.id}`)?.click()}
+                        disabled={uploadingId === inv.id}
+                        className="inline-flex items-center justify-center p-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 border border-slate-200 hover:border-emerald-200 transition-colors shadow-sm group cursor-pointer disabled:opacity-50"
+                        title="Upload Bukti Potong PPh 23"
+                      >
+                        {uploadingId === inv.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <UploadCloud className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        )}
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {invoices.length === 0 && (
-                  <tr><td colSpan={7} className="py-6 text-center text-slate-400">Belum ada transaksi</td></tr>
+                  <tr><td colSpan={8} className="py-6 text-center text-slate-400">Belum ada transaksi</td></tr>
                 )}
               </tbody>
             </table>

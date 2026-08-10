@@ -551,7 +551,7 @@ export default function InvoiceTracker() {
                       </label>
                       <input
                         type="file"
-                        accept=".pdf"
+                        accept=".pdf,image/*"
                         onChange={(e) => setImportFile(e.target.files?.[0] || null)}
                         className="block w-full text-sm text-slate-500
                           file:mr-4 file:py-2 file:px-4

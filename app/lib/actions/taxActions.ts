@@ -124,3 +124,51 @@ export async function toggleMonthlyStatus(period: string, currentStatus: string)
     return { success: false, error: (error as Error).message };
   }
 }
+
+// --- TAX OBJECTS (NEW REVAMP) ---
+export async function getTaxObjects() {
+  try {
+    const query = `SELECT * FROM tax_objects ORDER BY date DESC, created_at DESC`;
+    const result = await pool.query(query);
+    return { success: true, data: result.rows };
+  } catch (error) {
+    console.error("Error fetching tax objects:", error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export async function addTaxObject(
+  transaction_id: string,
+  transaction_description: string,
+  tax_name: string,
+  tax_type: string,
+  base_amount: number,
+  tax_amount: number,
+  status: string,
+  date: string
+) {
+  try {
+    const query = `
+      INSERT INTO tax_objects (transaction_id, transaction_description, tax_name, tax_type, base_amount, tax_amount, status, date)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *;
+    `;
+    const values = [transaction_id, transaction_description, tax_name, tax_type, base_amount, tax_amount, status, date];
+    const result = await pool.query(query, values);
+    return { success: true, data: result.rows[0] };
+  } catch (error) {
+    console.error("Error adding tax object:", error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export async function deleteTaxObject(id: string) {
+  try {
+    const query = `DELETE FROM tax_objects WHERE id = $1`;
+    await pool.query(query, [id]);
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting tax object:", error);
+    return { success: false, error: (error as Error).message };
+  }
+}

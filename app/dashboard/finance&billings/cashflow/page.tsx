@@ -27,6 +27,7 @@ import { getInvoices } from "@/app/lib/actions/invoiceActions";
 import { fetchOpsAction } from "@/app/lib/actions/opsActions";
 import { getBankTransactions } from "@/app/lib/actions/bankActions";
 import BankStatementImporter from "./BankStatementImporter";
+import TaxMarkModal from "./TaxMarkModal";
 
 const COLORS = [
   "#10b981",
@@ -54,6 +55,9 @@ export default function CashFlow() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshCount, setRefreshCount] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState<string>("ALL");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "IN" | "OUT">("ALL");
+  const [selectedTaxTx, setSelectedTaxTx] = useState<Transaction | null>(null);
+  const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -126,13 +130,22 @@ export default function CashFlow() {
   }, [transactions]);
 
   const filteredTransactions = useMemo(() => {
-    if (selectedMonth === "ALL") return transactions;
-    return transactions.filter((t) => {
-      const y = t.date.getFullYear();
-      const m = String(t.date.getMonth() + 1).padStart(2, "0");
-      return `${y}-${m}` === selectedMonth;
-    });
-  }, [transactions, selectedMonth]);
+    let filtered = transactions;
+    
+    if (selectedMonth !== "ALL") {
+      filtered = filtered.filter((t) => {
+        const y = t.date.getFullYear();
+        const m = String(t.date.getMonth() + 1).padStart(2, "0");
+        return `${y}-${m}` === selectedMonth;
+      });
+    }
+    
+    if (typeFilter !== "ALL") {
+      filtered = filtered.filter((t) => t.type === typeFilter);
+    }
+    
+    return filtered;
+  }, [transactions, selectedMonth, typeFilter]);
 
   const { totalIn, totalOut, netCashFlow, chartData, pieChartData } =
     useMemo(() => {
@@ -424,6 +437,17 @@ export default function CashFlow() {
                 Histori pergerakan dana masuk dan keluar.
               </p>
             </div>
+            <div>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as "ALL" | "IN" | "OUT")}
+                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer text-slate-700 font-medium"
+              >
+                <option value="ALL">All</option>
+                <option value="IN">Income</option>
+                <option value="OUT">Expanse</option>
+              </select>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -440,6 +464,9 @@ export default function CashFlow() {
                   </th>
                   <th className="py-4 px-6 font-semibold uppercase tracking-wider text-[11px] text-right">
                     Nominal (Rp)
+                  </th>
+                  <th className="py-4 px-6 font-semibold uppercase tracking-wider text-[11px] text-center">
+                    Aksi
                   </th>
                 </tr>
               </thead>
@@ -472,11 +499,23 @@ export default function CashFlow() {
                       {trx.type === "IN" ? "+" : "-"}
                       {formatIDR(trx.amount)}
                     </td>
+                    <td className="py-4 px-6 text-center">
+                      <button
+                        onClick={() => {
+                          setSelectedTaxTx(trx);
+                          setIsTaxModalOpen(true);
+                        }}
+                        className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 transition-colors shadow-sm text-xs font-semibold whitespace-nowrap"
+                        title="Tandai sebagai Pajak"
+                      >
+                        Tandai Pajak
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {filteredTransactions.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-slate-400">
+                    <td colSpan={5} className="py-8 text-center text-slate-400">
                       Belum ada pergerakan kas tercatat.
                     </td>
                   </tr>
@@ -486,6 +525,17 @@ export default function CashFlow() {
           </div>
         </div>
       </div>
+      
+      <TaxMarkModal 
+        isOpen={isTaxModalOpen} 
+        onClose={() => setIsTaxModalOpen(false)} 
+        transaction={selectedTaxTx}
+        onSuccess={() => {
+          alert("Transaksi berhasil ditandai sebagai objek pajak!");
+          // Optional: we don't strictly need to refresh if we don't show the mark on this table,
+          // but we could refresh if we want to show a 'Tax' badge later.
+        }}
+      />
     </div>
   );
 }

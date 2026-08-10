@@ -6,15 +6,17 @@ import { updateLastSeen, getCurrentUserId } from "@/app/lib/actions/chatActions"
 
 export default function PresenceManager() {
   useEffect(() => {
+    let isMounted = true;
     let interval: NodeJS.Timeout;
     let channel: any;
 
     async function initPresence() {
       const userId = await getCurrentUserId();
-      if (!userId) return;
+      if (!isMounted || !userId) return;
 
       // Update last seen immediately on load
       await updateLastSeen();
+      if (!isMounted) return;
 
       // Update last seen every 1 minute
       interval = setInterval(() => {
@@ -55,6 +57,7 @@ export default function PresenceManager() {
     initPresence();
 
     return () => {
+      isMounted = false;
       if (interval) clearInterval(interval);
       if (channel) supabase.removeChannel(channel);
       // Try to update one last time on unmount

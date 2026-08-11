@@ -161,7 +161,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           icon: FileText,
         },
         {
-          name: "Cash FLow",
+          name: "Cashflow",
           href: "/dashboard/finance&billings/cashflow",
           icon: FileText,
         },

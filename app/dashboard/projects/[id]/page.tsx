@@ -12,7 +12,7 @@ import {
   UploadCloud,
   MapPin,
 } from "lucide-react";
-import InvoicePage from "./invoice/page";
+import InvoicePage from "./finance/invoice/page";
 import Image from "next/image";
 
 export default function ProjectWorkspacePage({
@@ -37,7 +37,7 @@ export default function ProjectWorkspacePage({
 
   // Dummy Work Orders (empty array to show empty state)
   const workOrders: any[] = [];
-  
+
   // Dummy Invoices (empty array to show empty state)
   const invoices: any[] = [];
 
@@ -98,7 +98,6 @@ export default function ProjectWorkspacePage({
           </Link>
         </div>
       )}
-
 
       {/* 2. Page Header (Linear Style) */}
       <header>
@@ -207,7 +206,10 @@ export default function ProjectWorkspacePage({
       </section>
 
       {/* 5. Invoice Tracking */}
-      <section className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: "200ms", animationFillMode: "both" }}>
+      <section
+        className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500"
+        style={{ animationDelay: "200ms", animationFillMode: "both" }}
+      >
         <h2 className="text-xl font-bold mb-6 text-white light:text-slate-900 flex items-center gap-2">
           <FileText className="w-5 h-5 text-brand-cyan" />
           Invoice Tracking
@@ -217,11 +219,27 @@ export default function ProjectWorkspacePage({
             <table className="w-full text-left text-sm text-slate-300 light:text-slate-600">
               <thead className="text-xs text-slate-400 light:text-slate-500 uppercase bg-[#090d16]/80 light:bg-slate-50 border-b border-slate-800/80 light:border-slate-200">
                 <tr>
-                  <th scope="col" className="px-6 py-4 font-semibold">No</th>
-                  <th scope="col" className="px-6 py-4 font-semibold whitespace-nowrap">Tanggal Terbit</th>
-                  <th scope="col" className="px-6 py-4 font-semibold">Nomor Invoice</th>
-                  <th scope="col" className="px-6 py-4 font-semibold">Nominal</th>
-                  <th scope="col" className="px-6 py-4 font-semibold whitespace-nowrap">Status</th>
+                  <th scope="col" className="px-6 py-4 font-semibold">
+                    No
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 font-semibold whitespace-nowrap"
+                  >
+                    Tanggal Terbit
+                  </th>
+                  <th scope="col" className="px-6 py-4 font-semibold">
+                    Nomor Invoice
+                  </th>
+                  <th scope="col" className="px-6 py-4 font-semibold">
+                    Nominal
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 font-semibold whitespace-nowrap"
+                  >
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80 light:divide-slate-200">
@@ -238,15 +256,26 @@ export default function ProjectWorkspacePage({
                   </tr>
                 ) : (
                   invoices.map((inv, idx) => (
-                    <tr key={idx} className="hover:bg-white/5 light:hover:bg-slate-50/80 transition-colors">
+                    <tr
+                      key={idx}
+                      className="hover:bg-white/5 light:hover:bg-slate-50/80 transition-colors"
+                    >
                       <td className="px-6 py-4">{idx + 1}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{inv.tanggalTerbit}</td>
-                      <td className="px-6 py-4 font-medium text-white light:text-slate-900">{inv.nomor}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {inv.tanggalTerbit}
+                      </td>
+                      <td className="px-6 py-4 font-medium text-white light:text-slate-900">
+                        {inv.nomor}
+                      </td>
                       <td className="px-6 py-4 font-mono">{inv.nominal}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          inv.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            inv.status === "Paid"
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "bg-amber-500/10 text-amber-400"
+                          }`}
+                        >
                           {inv.status}
                         </span>
                       </td>
@@ -260,7 +289,10 @@ export default function ProjectWorkspacePage({
       </section>
 
       {/* 6. Work Order (WO) Tracking */}
-      <section className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: "300ms", animationFillMode: "both" }}>
+      <section
+        className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500"
+        style={{ animationDelay: "300ms", animationFillMode: "both" }}
+      >
         <h2 className="text-xl font-bold mb-6 text-white light:text-slate-900 flex items-center gap-2">
           <FileText className="w-5 h-5 text-brand-cyan" />
           Work Order Tracking
@@ -270,11 +302,27 @@ export default function ProjectWorkspacePage({
             <table className="w-full text-left text-sm text-slate-300 light:text-slate-600">
               <thead className="text-xs text-slate-400 light:text-slate-500 uppercase bg-[#090d16]/80 light:bg-slate-50 border-b border-slate-800/80 light:border-slate-200">
                 <tr>
-                  <th scope="col" className="px-6 py-4 font-semibold">No</th>
-                  <th scope="col" className="px-6 py-4 font-semibold whitespace-nowrap">Tanggal Terbit</th>
-                  <th scope="col" className="px-6 py-4 font-semibold">Nama WO</th>
-                  <th scope="col" className="px-6 py-4 font-semibold">Jumlah Span</th>
-                  <th scope="col" className="px-6 py-4 font-semibold whitespace-nowrap">Tanggal Selesai</th>
+                  <th scope="col" className="px-6 py-4 font-semibold">
+                    No
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 font-semibold whitespace-nowrap"
+                  >
+                    Tanggal Terbit
+                  </th>
+                  <th scope="col" className="px-6 py-4 font-semibold">
+                    Nama WO
+                  </th>
+                  <th scope="col" className="px-6 py-4 font-semibold">
+                    Jumlah Span
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 font-semibold whitespace-nowrap"
+                  >
+                    Tanggal Selesai
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80 light:divide-slate-200">
@@ -291,10 +339,19 @@ export default function ProjectWorkspacePage({
                   </tr>
                 ) : (
                   workOrders.map((wo, index) => (
-                    <tr key={index} className="hover:bg-white/5 light:hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-white light:text-slate-900">{index + 1}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{wo.tanggalTerbit}</td>
-                      <td className="px-6 py-4 font-medium text-brand-cyan whitespace-nowrap">{wo.namaWO}</td>
+                    <tr
+                      key={index}
+                      className="hover:bg-white/5 light:hover:bg-slate-50 transition-colors"
+                    >
+                      <td className="px-6 py-4 font-medium text-white light:text-slate-900">
+                        {index + 1}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {wo.tanggalTerbit}
+                      </td>
+                      <td className="px-6 py-4 font-medium text-brand-cyan whitespace-nowrap">
+                        {wo.namaWO}
+                      </td>
                       <td className="px-6 py-4">{wo.jumlahSpan}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 light:bg-emerald-100 light:text-emerald-700 border border-emerald-500/20 light:border-emerald-200">

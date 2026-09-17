@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pdf from 'pdf-parse';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,13 +12,15 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Parse PDF text locally using pdf-parse
-    const data = await pdf(buffer);
-    const text = data.text;
+    // Parse CSV text directly
+    let text = buffer.toString('utf-8');
     
     // DEBUG: Save the raw text to a file so the AI can read it
-    import('fs').then(fs => fs.writeFileSync('parsed_pdf_debug.txt', text));
+    import('fs').then(fs => fs.writeFileSync('parsed_csv_debug.txt', text));
 
+    // Normalize newlines and replace typical CSV separators (like quotes around commas) if needed, 
+    // but the regex will handle basic commas/semicolons in place of spaces.
+    text = text.replace(/\r\n/g, '\n');
     const lines = text.split('\n');
     const transactions = [];
     
@@ -30,7 +31,8 @@ export async function POST(req: NextRequest) {
       const trimmed = line.trim();
       if (!trimmed) continue;
 
-      const dateMatch = trimmed.match(/^(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})\s+(.*)/);
+      // Allow space, comma, or semicolon as separator after date
+      const dateMatch = trimmed.match(/^(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})[\s,;]+(.*)/);
       if (dateMatch) {
           pendingTx = {
               date: dateMatch[1],
@@ -90,7 +92,8 @@ export async function POST(req: NextRequest) {
               descAndTeller = descAndTeller.substring(0, idx) + descAndTeller.substring(idx + amounts[i].length);
           }
       }
-      descAndTeller = descAndTeller.replace(/\s+/g, ' ').trim();
+      // Replace commas or semicolons left over with spaces to allow the rest of the logic to work
+      descAndTeller = descAndTeller.replace(/[,;]+/g, ' ').replace(/\s+/g, ' ').trim();
 
       const words = descAndTeller.split(' ');
       let teller = "-";
@@ -145,7 +148,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ transactions });
   } catch (error: any) {
-    console.error("Local PDF Parsing Error:", error);
+    console.error("Local CSV Parsing Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

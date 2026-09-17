@@ -95,7 +95,7 @@ export default function BankStatementImporter({ onImportSuccess }: { onImportSuc
         className="flex items-center gap-2 px-4 py-2 bg-[#004b87] text-white rounded-lg text-sm font-medium hover:bg-[#003865] transition-colors shadow-sm"
       >
         <Upload className="w-4 h-4" />
-        Import Mutasi PDF
+        Import Mutasi CSV
       </button>
 
       {isOpen && (
@@ -106,7 +106,7 @@ export default function BankStatementImporter({ onImportSuccess }: { onImportSuc
             <div className="flex items-center justify-between p-6 border-b border-slate-100">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Import Mutasi Bank (AI)</h3>
-                <p className="text-sm text-slate-500">Unggah PDF rekening koran, AI akan mengekstrak otomatis.</p>
+                <p className="text-sm text-slate-500">Unggah CSV rekening koran, sistem akan mengekstrak otomatis.</p>
               </div>
               <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
                 <X className="w-5 h-5" />
@@ -122,11 +122,11 @@ export default function BankStatementImporter({ onImportSuccess }: { onImportSuc
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <FileText className="w-10 h-10 text-slate-400 mb-4" />
-                  <p className="text-sm font-medium text-slate-900">Klik untuk mengunggah PDF</p>
+                  <p className="text-sm font-medium text-slate-900">Klik untuk mengunggah CSV</p>
                   <p className="text-xs text-slate-500 mt-1">Maksimal ukuran file 10MB</p>
                   <input 
                     type="file" 
-                    accept="application/pdf" 
+                    accept=".csv" 
                     className="hidden" 
                     ref={fileInputRef}
                     onChange={handleFileChange}
@@ -137,7 +137,7 @@ export default function BankStatementImporter({ onImportSuccess }: { onImportSuc
               {isExtracting && (
                 <div className="py-12 flex flex-col items-center justify-center">
                   <Loader2 className="w-8 h-8 text-[#004b87] animate-spin mb-4" />
-                  <p className="text-sm font-medium text-slate-900">Membaca dokumen dengan AI...</p>
+                  <p className="text-sm font-medium text-slate-900">Membaca dokumen CSV...</p>
                   <p className="text-xs text-slate-500 mt-1">Harap tunggu beberapa saat.</p>
                 </div>
               )}

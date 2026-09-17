@@ -326,11 +326,11 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                   PT SURVEY TEKNOLOGI INDONESIA
                 </div>
                 <div className="font-bold text-black">
-                  Perumahan Golden Galaxi INN Block B no 7
+                  Jalan Ir. H. Djuanda No. 3 Depok 16423 - Indonesia 
                 </div>
-                <div className="font-bold text-black">
+                {/* <div className="font-bold text-black">
                   Jalan Waduk Tunggu Pampang - Kec Manggala Kota Makassar
-                </div>
+                </div> */}
                 <table className="mt-1 text-black">
                   <tbody>
                     <tr>
@@ -344,7 +344,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                           href="mailto:indosurtek@gmail.com"
                           className="text-blue-600 underline"
                         >
-                          indosurtek@gmail.com
+                          info@surveyteknologi.id
                         </a>
                       </td>
                     </tr>
@@ -485,6 +485,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
               <div className="font-bold text-black space-y-1.5 mt-1">
                 <div>No Rekening : 0343-01-282828-56-1</div>
                 <div>Rekening Bank BRI 0343 CABANG SOMBA OPU - MAKASSAR</div>
+                <div>NPWP : 39.074.728.5-805.000</div>
                 <div>An PT SURVEY TEKNOLOGI INDONESIA</div>
               </div>
 
@@ -539,7 +540,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
           <div className="flex justify-end w-full pr-10">
             <div className="text-center font-bold text-black flex flex-col items-start w-56">
               <div className="text-left mb-1">
-                Makassar , {invoiceData.invoiceDate}
+                Depok , {invoiceData.invoiceDate}
               </div>
               <div className="text-left mb-16">Hormat Kami</div>
               <div className="underline uppercase whitespace-nowrap">

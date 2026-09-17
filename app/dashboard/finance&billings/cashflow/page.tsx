@@ -1,522 +1,190 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  Wallet,
-  Activity,
-  ArrowRightLeft,
-  Filter,
-} from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import React, { useState } from "react";
+import { Plus, ArrowDownRight, ArrowUpRight, Wallet, Search, Filter, X, CheckCircle2, DollarSign } from "lucide-react";
 
-import { getInvoices } from "@/app/lib/actions/invoiceActions";
-import { fetchOpsAction } from "@/app/lib/actions/opsActions";
-import { getBankTransactions } from "@/app/lib/actions/bankActions";
-import BankStatementImporter from "./BankStatementImporter";
-import TaxMarkModal from "./TaxMarkModal";
-
-const COLORS = [
-  "#10b981",
-  "#f43f5e",
-  "#f59e0b",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#14b8a6",
-  "#f97316",
-];
+type TxType = "INCOME" | "EXPENSE";
 
 interface Transaction {
   id: string;
-  date: Date;
-  dateString: string; // for display
+  date: string;
   description: string;
-  type: "IN" | "OUT";
+  type: TxType;
   amount: number;
-  category?: string;
+  category: string;
 }
 
-export default function CashFlow() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshCount, setRefreshCount] = useState(0);
-  const [selectedMonth, setSelectedMonth] = useState<string>("ALL");
-  const [typeFilter, setTypeFilter] = useState<"ALL" | "IN" | "OUT">("ALL");
-  const [selectedTaxTx, setSelectedTaxTx] = useState<Transaction | null>(null);
-  const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
+export default function CashflowPage() {
+  const [transactions, setTransactions] = useState<Transaction[]>([
+    { id: "1", date: "2026-08-20", description: "Payment for Project A", type: "INCOME", amount: 12500000, category: "Project" },
+    { id: "2", date: "2026-08-21", description: "Office Supplies", type: "EXPENSE", amount: 450000, category: "Operations" },
+    { id: "3", date: "2026-08-23", description: "Software Licenses", type: "EXPENSE", amount: 2100000, category: "IT" },
+  ]);
 
-  useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const [invRes, opsRes, bankRes] = await Promise.all([
-          getInvoices(),
-          fetchOpsAction(),
-          getBankTransactions(),
-        ]);
-
-        const merged: Transaction[] = [];
-
-        // Parse OpsOasis (Cash Out)
-        if (opsRes.success && opsRes.data) {
-          opsRes.data.forEach((ops: any) => {
-            const d = new Date(ops.date);
-            merged.push({
-              id: ops.ops_id?.toString() || `ops-${Math.random()}`,
-              date: d,
-              dateString: d.toLocaleDateString("id-ID"),
-              description: ops.item || "Operational Cost",
-              type: "OUT",
-              amount: Number(ops.total) || 0,
-              category: "Operasional",
-            });
-          });
-        }
-
-        // Parse Bank Transactions
-        if (bankRes.success && bankRes.data) {
-          bankRes.data.forEach((trx: any) => {
-            const d = new Date(trx.date);
-            const isCredit = Number(trx.credit) > 0;
-            const amount = isCredit ? Number(trx.credit) : Number(trx.debit);
-
-            merged.push({
-              id: trx.id || `bank-${Math.random()}`,
-              date: d,
-              dateString: d.toLocaleDateString("id-ID"),
-              description: trx.description || "Bank Transaction",
-              type: isCredit ? "IN" : "OUT",
-              amount: amount || 0,
-              category: trx.category || "Lain-lain",
-            });
-          });
-        }
-
-        // Sort desc (newest first)
-        merged.sort((a, b) => b.date.getTime() - a.date.getTime());
-        setTransactions(merged);
-      } catch (err) {
-        console.error("Failed to load cashflow data", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadData();
-  }, [refreshCount]);
-
-  const availableMonths = useMemo(() => {
-    const months = new Set<string>();
-    transactions.forEach((t) => {
-      const y = t.date.getFullYear();
-      const m = String(t.date.getMonth() + 1).padStart(2, "0");
-      months.add(`${y}-${m}`);
-    });
-    return Array.from(months).sort((a, b) => b.localeCompare(a));
-  }, [transactions]);
-
-  const filteredTransactions = useMemo(() => {
-    let filtered = transactions;
-    
-    if (selectedMonth !== "ALL") {
-      filtered = filtered.filter((t) => {
-        const y = t.date.getFullYear();
-        const m = String(t.date.getMonth() + 1).padStart(2, "0");
-        return `${y}-${m}` === selectedMonth;
-      });
-    }
-    
-    if (typeFilter !== "ALL") {
-      filtered = filtered.filter((t) => t.type === typeFilter);
-    }
-    
-    return filtered;
-  }, [transactions, selectedMonth, typeFilter]);
-
-  const { totalIn, totalOut, netCashFlow, chartData, pieChartData } =
-    useMemo(() => {
-      let tIn = 0;
-      let tOut = 0;
-
-      // Build chart data grouped by YYYY-MM
-      const monthlyMap: Record<
-        string,
-        { month: string; CashIn: number; CashOut: number; order: string }
-      > = {};
-
-      const categoryMap: Record<string, number> = {};
-
-      filteredTransactions.forEach((t) => {
-        if (t.type === "IN") tIn += t.amount;
-        else {
-          tOut += t.amount;
-          // Group OUT transactions for pie chart
-          const cat = t.category || "Lain-lain";
-          categoryMap[cat] = (categoryMap[cat] || 0) + t.amount;
-        }
-
-        // for chart
-        const y = t.date.getFullYear();
-        const m = String(t.date.getMonth() + 1).padStart(2, "0");
-        const key = `${y}-${m}`;
-
-        const monthName = t.date.toLocaleString("id-ID", {
-          month: "short",
-          year: "numeric",
-        });
-
-        if (!monthlyMap[key]) {
-          monthlyMap[key] = {
-            month: monthName,
-            CashIn: 0,
-            CashOut: 0,
-            order: key,
-          };
-        }
-
-        if (t.type === "IN") monthlyMap[key].CashIn += t.amount;
-        else monthlyMap[key].CashOut += t.amount;
-      });
-
-      const cData = Object.values(monthlyMap).sort((a, b) =>
-        a.order.localeCompare(b.order),
-      );
-
-      const pData = Object.entries(categoryMap)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
-
-      return {
-        totalIn: tIn,
-        totalOut: tOut,
-        netCashFlow: tIn - tOut,
-        chartData: cData,
-        pieChartData: pData,
-      };
-    }, [filteredTransactions]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<TxType>("INCOME");
+  const [formData, setFormData] = useState({ date: "", description: "", amount: "", category: "" });
 
   const formatIDR = (val: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(val);
+    return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3">
-          <Activity className="w-8 h-8 text-brand-cyan animate-pulse" />
-          <p className="text-sm font-medium text-slate-500">
-            Memuat Data Kas...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const handleOpenModal = (type: TxType) => {
+    setModalType(type);
+    setFormData({ date: new Date().toISOString().split("T")[0], description: "", amount: "", category: "" });
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.date || !formData.description || !formData.amount) return;
+
+    const newTx: Transaction = {
+      id: Math.random().toString(36).substr(2, 9),
+      date: formData.date,
+      description: formData.description,
+      type: modalType,
+      amount: Number(formData.amount),
+      category: formData.category || "Uncategorized"
+    };
+
+    setTransactions(prev => [newTx, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    setIsModalOpen(false);
+  };
+
+  const totalIncome = transactions.filter(t => t.type === "INCOME").reduce((acc, curr) => acc + curr.amount, 0);
+  const totalExpense = transactions.filter(t => t.type === "EXPENSE").reduce((acc, curr) => acc + curr.amount, 0);
+  const balance = totalIncome - totalExpense;
 
   return (
     <div className="min-h-screen bg-[#f8fafc] p-6 lg:p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Wallet className="w-6 h-6 text-[#004b87]" />
-              Cashflow Dashboard
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Pemantauan arus kas masuk dan keluar perusahaan secara real-time.
-            </p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Cash Flow Tracker</h1>
+            <p className="text-slate-500 mt-2">Manage your daily income and expenses with ease.</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer appearance-none text-slate-700"
-              >
-                <option value="ALL">Semua Bulan</option>
-                {availableMonths.map((m) => {
-                  const [y, mo] = m.split("-");
-                  const date = new Date(Number(y), Number(mo) - 1);
-                  const label = date.toLocaleString("id-ID", { month: "long", year: "numeric" });
-                  return <option key={m} value={m}>{label}</option>;
-                })}
-              </select>
-            </div>
-            <BankStatementImporter
-              onImportSuccess={() => setRefreshCount((prev) => prev + 1)}
-            />
+            <button 
+              onClick={() => handleOpenModal("EXPENSE")}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-rose-100 text-rose-600 rounded-xl font-semibold hover:bg-rose-50 hover:border-rose-200 transition-all shadow-sm"
+            >
+              <Plus className="w-4 h-4" /> Add Expense
+            </button>
+            <button 
+              onClick={() => handleOpenModal("INCOME")}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#004b87] hover:bg-[#003865] text-white rounded-xl font-semibold transition-all shadow-md shadow-blue-900/20"
+            >
+              <Plus className="w-4 h-4" /> Add Income
+            </button>
           </div>
         </div>
 
-        {/* KPI CARDS */}
+        {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative overflow-hidden group hover:border-emerald-200 transition-colors">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <ArrowDownRight className="w-24 h-24 text-emerald-500" />
+          {/* Total Balance */}
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden group">
+            <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-500"></div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-md">
+                <Wallet className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-sm font-medium text-slate-300">Total Balance</span>
             </div>
-            <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-              Total Pemasukan (Cash In)
-            </p>
-            <h2 className="text-3xl font-bold text-slate-900">
-              {formatIDR(totalIn)}
-            </h2>
-            <p className="text-xs text-slate-400 mt-2">
-              Berdasarkan mutasi riil (Bank Statement)
-            </p>
+            <div className="text-3xl font-bold tracking-tight">{formatIDR(balance)}</div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative overflow-hidden group hover:border-rose-200 transition-colors">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <ArrowUpRight className="w-24 h-24 text-rose-500" />
-            </div>
-            <p className="text-xs font-bold text-rose-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-              Total Pengeluaran (Cash Out)
-            </p>
-            <h2 className="text-3xl font-bold text-slate-900">
-              {formatIDR(totalOut)}
-            </h2>
-            <p className="text-xs text-slate-400 mt-2">
-              Berdasarkan data operational cost  <br />& Bank statement
-            </p>
+          {/* Income */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+             <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+             <div className="flex items-center justify-between mb-4">
+              <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600">
+                <ArrowDownRight className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-full">+12% from last month</span>
+             </div>
+             <span className="block text-sm font-medium text-slate-500 mb-1">Total Income</span>
+             <div className="text-2xl font-bold text-slate-900">{formatIDR(totalIncome)}</div>
           </div>
 
-          <div
-            className={`rounded-2xl p-6 border shadow-sm relative overflow-hidden group transition-all duration-300 ${netCashFlow >= 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-700 border-emerald-600 text-white" : "bg-gradient-to-br from-rose-500 to-rose-700 border-rose-600 text-white"}`}
-          >
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity group-hover:scale-110 duration-500">
-              <ArrowRightLeft className="w-24 h-24" />
-            </div>
-            <p className="text-xs font-bold uppercase tracking-widest mb-2 text-white/80">
-              Net Cash Flow
-            </p>
-            <h2 className="text-3xl font-bold">{formatIDR(netCashFlow)}</h2>
-            <p className="text-xs text-white/60 mt-2">
-              Selisih Pemasukan & Pengeluaran
-            </p>
+          {/* Expense */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+             <div className="absolute right-0 top-0 w-24 h-24 bg-rose-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+             <div className="flex items-center justify-between mb-4">
+              <div className="p-2.5 bg-rose-50 rounded-xl text-rose-600">
+                <ArrowUpRight className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-rose-50 text-rose-600 rounded-full">-5% from last month</span>
+             </div>
+             <span className="block text-sm font-medium text-slate-500 mb-1">Total Expense</span>
+             <div className="text-2xl font-bold text-slate-900">{formatIDR(totalExpense)}</div>
           </div>
         </div>
 
-        {/* CHARTS */}
-        <div className="flex flex-row gap-6">
-          <div className="w-[70%] bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-            <div className="mb-6">
-              <h3 className="text-base font-bold text-slate-900">
-                Grafik Arus Kas Bulanan
-              </h3>
-              <p className="text-xs text-slate-500">
-                Perbandingan pemasukan dan pengeluaran tiap bulan.
-              </p>
-            </div>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="month"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: "#64748b" }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: "#64748b" }}
-                    tickFormatter={(value) => "Rp" + value / 1000000 + "M"}
-                  />
-                  <Tooltip
-                    formatter={(value: any) => formatIDR(Number(value))}
-                    contentStyle={{
-                      borderRadius: "12px",
-                      border: "none",
-                      boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                    }}
-                    cursor={{ fill: "#f8fafc" }}
-                  />
-                  <Legend
-                    iconType="circle"
-                    wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }}
-                  />
-                  <Bar
-                    dataKey="CashIn"
-                    name="Pemasukan"
-                    fill="#10b981"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={40}
-                  />
-                  <Bar
-                    dataKey="CashOut"
-                    name="Pengeluaran"
-                    fill="#f43f5e"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={40}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          <div className="w-[30%] bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col">
-            <div className="mb-6">
-              <h3 className="text-base font-bold text-slate-900">
-                Kategori Pengeluaran
-              </h3>
-              <p className="text-xs text-slate-500">
-                Distribusi berdasarkan kategori.
-              </p>
-            </div>
-            <div className="flex-1 min-h-[250px] w-full flex items-center justify-center">
-              {pieChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieChartData}
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {pieChartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value: any) => formatIDR(Number(value))}
-                      contentStyle={{
-                        borderRadius: "12px",
-                        border: "none",
-                        boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                      }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: "12px" }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-sm text-slate-400">Belum ada data.</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* TABLE */}
+        {/* Transactions Table */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
-          <div className="px-6 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm">
-                Riwayat Transaksi Gabungan
-              </h3>
-              <p className="text-xs text-slate-500">
-                Histori pergerakan dana masuk dan keluar.
-              </p>
-            </div>
-            <div>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as "ALL" | "IN" | "OUT")}
-                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer text-slate-700 font-medium"
-              >
-                <option value="ALL">All</option>
-                <option value="IN">Income</option>
-                <option value="OUT">Expanse</option>
-              </select>
+          <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="text-lg font-bold text-slate-900">Recent Transactions</h2>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text" 
+                  placeholder="Search transactions..." 
+                  className="pl-9 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-[#004b87]/20 outline-none w-full sm:w-64 transition-all"
+                />
+              </div>
+              <button className="p-2 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-colors">
+                <Filter className="w-4 h-4" />
+              </button>
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="text-slate-500 border-b border-slate-100 bg-white">
-                  <th className="py-4 px-6 font-semibold uppercase tracking-wider text-[11px]">
-                    Tanggal
-                  </th>
-                  <th className="py-4 px-6 font-semibold uppercase tracking-wider text-[11px]">
-                    Deskripsi
-                  </th>
-                  <th className="py-4 px-6 font-semibold uppercase tracking-wider text-[11px]">
-                    Tipe Transaksi
-                  </th>
-                  <th className="py-4 px-6 font-semibold uppercase tracking-wider text-[11px] text-right">
-                    Nominal (Rp)
-                  </th>
-                  <th className="py-4 px-6 font-semibold uppercase tracking-wider text-[11px] text-center">
-                    Aksi
-                  </th>
+              <thead className="bg-slate-50/50">
+                <tr className="text-slate-500">
+                  <th className="py-4 px-6 font-semibold">Date</th>
+                  <th className="py-4 px-6 font-semibold">Description</th>
+                  <th className="py-4 px-6 font-semibold">Category</th>
+                  <th className="py-4 px-6 font-semibold">Type</th>
+                  <th className="py-4 px-6 font-semibold text-right">Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredTransactions.map((trx, idx) => (
-                  <tr
-                    key={trx.id + idx}
-                    className="hover:bg-slate-50/50 transition group"
-                  >
+              <tbody className="divide-y divide-slate-100">
+                {transactions.map((trx) => (
+                  <tr key={trx.id} className="hover:bg-slate-50/80 transition-colors group">
                     <td className="py-4 px-6 text-slate-500 whitespace-nowrap">
-                      {trx.dateString}
+                      {new Date(trx.date).toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' })}
                     </td>
                     <td className="py-4 px-6 font-medium text-slate-800">
                       {trx.description}
                     </td>
                     <td className="py-4 px-6">
-                      {trx.type === "IN" ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">
-                          <ArrowDownRight className="w-3 h-3" /> Pemasukan
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                        {trx.category}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      {trx.type === "INCOME" ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-100/50">
+                          <ArrowDownRight className="w-3 h-3" /> Income
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-rose-50 text-rose-600 border border-rose-100">
-                          <ArrowUpRight className="w-3 h-3" /> Pengeluaran
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-rose-50 text-rose-600 border border-rose-100/50">
+                          <ArrowUpRight className="w-3 h-3" /> Expense
                         </span>
                       )}
                     </td>
-                    <td
-                      className={`py-4 px-6 text-right font-bold whitespace-nowrap ${trx.type === "IN" ? "text-emerald-600" : "text-slate-900"}`}
-                    >
-                      {trx.type === "IN" ? "+" : "-"}
-                      {formatIDR(trx.amount)}
-                    </td>
-                    <td className="py-4 px-6 text-center">
-                      <button
-                        onClick={() => {
-                          setSelectedTaxTx(trx);
-                          setIsTaxModalOpen(true);
-                        }}
-                        className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 transition-colors shadow-sm text-xs font-semibold whitespace-nowrap"
-                        title="Tandai sebagai Pajak"
-                      >
-                        Tandai Pajak
-                      </button>
+                    <td className={`py-4 px-6 text-right font-bold whitespace-nowrap ${trx.type === "INCOME" ? "text-emerald-600" : "text-slate-900"}`}>
+                      {trx.type === "INCOME" ? "+" : "-"}{formatIDR(trx.amount)}
                     </td>
                   </tr>
                 ))}
-                {filteredTransactions.length === 0 && (
+                {transactions.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-400">
-                      Belum ada pergerakan kas tercatat.
+                    <td colSpan={5} className="py-12 text-center text-slate-400">
+                      No transactions found.
                     </td>
                   </tr>
                 )}
@@ -525,17 +193,93 @@ export default function CashFlow() {
           </div>
         </div>
       </div>
-      
-      <TaxMarkModal 
-        isOpen={isTaxModalOpen} 
-        onClose={() => setIsTaxModalOpen(false)} 
-        transaction={selectedTaxTx}
-        onSuccess={() => {
-          alert("Transaksi berhasil ditandai sebagai objek pajak!");
-          // Optional: we don't strictly need to refresh if we don't show the mark on this table,
-          // but we could refresh if we want to show a 'Tax' badge later.
-        }}
-      />
+
+      {/* Add Transaction Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className={`p-6 text-white ${modalType === "INCOME" ? "bg-gradient-to-r from-emerald-500 to-emerald-600" : "bg-gradient-to-r from-rose-500 to-rose-600"}`}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  {modalType === "INCOME" ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                  Add {modalType === "INCOME" ? "Income" : "Expense"}
+                </h3>
+                <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-white/20 rounded-full transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-white/80 text-sm mt-1">Record a new transaction to your cash flow.</p>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Date</label>
+                <input 
+                  type="date" 
+                  required
+                  value={formData.date}
+                  onChange={e => setFormData({...formData, date: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#004b87]/20 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Description</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g., Client Payment, Internet Bill"
+                  value={formData.description}
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#004b87]/20 outline-none transition-all"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Amount (IDR)</label>
+                  <div className="relative">
+                    <DollarSign className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input 
+                      type="number" 
+                      required
+                      min="0"
+                      placeholder="0"
+                      value={formData.amount}
+                      onChange={e => setFormData({...formData, amount: e.target.value})}
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#004b87]/20 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Category</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g., Office, Salary"
+                    value={formData.category}
+                    onChange={e => setFormData({...formData, category: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#004b87]/20 outline-none transition-all"
+                  />
+                </div>
+              </div>
+              
+              <div className="pt-4 mt-6 border-t border-slate-100 flex gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-xl font-semibold transition-colors shadow-md ${modalType === "INCOME" ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20" : "bg-rose-500 hover:bg-rose-600 shadow-rose-500/20"}`}
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

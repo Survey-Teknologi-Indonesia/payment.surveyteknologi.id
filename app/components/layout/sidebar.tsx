@@ -31,7 +31,9 @@ import {
   CalculatorIcon,
   DollarSign,
   FileTerminal,
-  Wrench
+  Wrench,
+  FlaskConical,
+  BanknoteArrowDown,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -43,7 +45,12 @@ type MenuItem = {
   name: string;
   href: string;
   icon: React.ElementType;
-  subItems?: { name: string; href: string; icon?: React.ElementType }[];
+  subItems?: {
+    name: string;
+    href: string;
+    icon?: React.ElementType;
+    subItems?: { name: string; href: string; icon?: React.ElementType }[];
+  }[];
 };
 
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
@@ -110,32 +117,40 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       icon: Home,
     },
     {
-      name: "Tagihan (Invoice)",
-      href: `/dashboard/projects/${projectId}/invoice`,
-      icon: FileText,
-    },
-    {
-      name: "Kwitansi",
-      href: `/dashboard/projects/${projectId}/kwitansi`,
-      icon: FileText,
-    },
-    {
-      name: "Operational",
-      href: `/dashboard/projects/${projectId}/operational`,
+      name: "Finance",
+      href: `/dashboard/projects/${projectId}/finance`,
       icon: Wallet,
       subItems: [
         {
-          name: "Overview",
-          href: `/dashboard/projects/${projectId}/operational/overview`,
-          icon: LayoutDashboard,
+          name: "Tagihan (Invoice)",
+          href: `/dashboard/projects/${projectId}/finance/invoice`,
+          icon: FileText,
         },
         {
-          name: "Operational Report",
-          href: `/dashboard/projects/${projectId}/operational/report`,
+          name: "Kwitansi",
+          href: `/dashboard/projects/${projectId}/finance/kwitansi`,
           icon: FileText,
+        },
+        {
+          name: "Operational",
+          href: `/dashboard/projects/${projectId}/operational`,
+          icon: BanknoteArrowDown,
+          subItems: [
+            {
+              name: "Overview",
+              href: `/dashboard/projects/${projectId}/operational/overview`,
+              icon: LayoutDashboard,
+            },
+            {
+              name: "Operational Report",
+              href: `/dashboard/projects/${projectId}/operational/report`,
+              icon: FileText,
+            },
+          ],
         },
       ],
     },
+
     {
       name: "Documents",
       href: `/dashboard/projects/${projectId}/documents`,
@@ -156,8 +171,18 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       icon: DollarSign,
       subItems: [
         {
+          name: "Finance Overview",
+          href: "/dashboard/finance&billings/financeOverview",
+          icon: LayoutDashboard,
+        },
+        {
           name: "Invoice Tracker",
           href: "/dashboard/finance&billings/invoiceTracker",
+          icon: FileText,
+        },
+        {
+          name: "Bank Statement",
+          href: "/dashboard/finance&billings/bankStatement",
           icon: FileText,
         },
         {
@@ -180,12 +205,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         {
           name: "Invoice Generator",
           href: "/dashboard/documentGenerator/invoiceGenerator",
-          icon: FileText
+          icon: FileText,
         },
         {
           name: "Proposal Generator",
           href: "/dashboard/documentGenerator/proposal",
-          icon: LetterText
+          icon: LetterText,
         },
       ],
     },
@@ -195,7 +220,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       icon: Calculator,
       subItems: [
         { name: "Tax Overview", href: "/dashboard/tax", icon: LayoutDashboard },
-        { name: "PPN Masukan", href: "/dashboard/tax/ppn-masukan", icon: CalculatorIcon },
+        {
+          name: "PPN Masukan",
+          href: "/dashboard/tax/ppn-masukan",
+          icon: CalculatorIcon,
+        },
         { name: "PPh 21", href: "/dashboard/tax/pph21", icon: CalculatorIcon },
       ],
     },
@@ -209,7 +238,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           href: "/dashboard/tools/scheduler",
           icon: CalendarClock,
         },
-      ]
+      ],
     },
     {
       name: "Assets",
